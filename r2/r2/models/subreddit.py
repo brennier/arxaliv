@@ -80,8 +80,8 @@ class Subreddit(Thing, Printable):
     _essentials = ('type', 'name', 'lang')
     _data_int_props = Thing._data_int_props + ('mod_actions', 'reported')
 
-    sr_limit = 50
-    gold_limit = 100
+    sr_limit = 500
+    gold_limit = 1000
     DEFAULT_LIMIT = object()
 
     # note: for purposely unrenderable reddits (like promos) set author_id = -1
@@ -412,10 +412,11 @@ class Subreddit(Thing, Printable):
             auto_srs = map(lambda sr: sr._id,
                            Subreddit._by_name(g.automatic_reddits, stale=stale).values())
 
-        srs = cls.top_lang_srs(c.content_langs, limit + len(auto_srs),
-                               filter_allow_top = True,
-                               over18 = over18, ids = True,
-                               stale=stale)
+        srs = []
+        #srs = cls.top_lang_srs(c.content_langs, limit + len(auto_srs),
+        #                       filter_allow_top = True,
+        #                       over18 = over18, ids = True,
+        #                       stale=stale)
 
         rv = []
         for sr in srs:
@@ -482,6 +483,8 @@ class Subreddit(Thing, Printable):
                                                       data=True,
                                                       return_dict=False,
                                                       stale=stale)
+        #elif user:
+        #    return []
         else:
             return cls.default_subreddits(ids = ids, over18=over18,
                                           limit=g.num_default_reddits,
@@ -798,7 +801,7 @@ class AllSR(FakeSubreddit):
 
 class _DefaultSR(FakeSubreddit):
     #notice the space before reddit.com
-    name = ' reddit.com'
+    name = ' arxaliv.org'
     path = '/'
     header = g.default_header_url
 
@@ -974,7 +977,7 @@ class DomainSR(FakeSubreddit):
         FakeSubreddit.__init__(self)
         self.domain = domain
         self.name = domain 
-        self.title = domain + ' ' + _('on reddit.com')
+        self.title = domain + ' ' + _('on arxaliv.org')
 
     def get_links(self, sort, time):
         from r2.lib.db import queries

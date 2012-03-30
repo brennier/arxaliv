@@ -133,7 +133,7 @@ string_dict = dict(
 
     submit_link = _("""You are submitting a link. The key to a successful submission is interesting content and a descriptive title."""),
     submit_text = _("""You are submitting a text-based post. Speak your mind. A title is required, but expanding further in the text field is not. Beginning your title with "vote up if" is violation of intergalactic law."""),
-    iphone_first = _("You should consider using [reddit's mobile interface](http://i.reddit.com/)."),
+    iphone_first = _("You should consider using [arxaliv's mobile interface](http://arxaliv.org/try.compact?dest=/.mobile)."),
     verify_email = _("we're going to need to verify your email address for you to proceed."),
     verify_email_submit = _("you'll be able to submit more frequently once you verify your email address"),
     email_verified =  _("your email address has been verfied"),
@@ -380,7 +380,7 @@ class RandomStringManager(object):
 rand_strings = RandomStringManager()
 
 rand_strings.add('sadmessages',   "Funny 500 page message", 10)
-rand_strings.add('create_reddit', "Reason to create a reddit", 20)
+rand_strings.add('create_reddit', "Reason to create a reddit", 10)
 
 
 def print_rand_strings():

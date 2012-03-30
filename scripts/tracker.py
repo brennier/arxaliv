@@ -19,7 +19,7 @@ def jsonpify(callback_name, data):
     return response
 
 config = RawConfigParser()
-config.read(['production.ini'])
+config.read(['run.ini'])
 tracking_secret = config.get('DEFAULT', 'tracking_secret')
 adtracker_url = config.get('DEFAULT', 'adtracker_url')
 

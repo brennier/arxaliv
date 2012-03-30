@@ -146,7 +146,10 @@ def send_queued_mail(test = False):
 
     clear = False
     if not test:
-        session = smtplib.SMTP(g.smtp_server)
+        session = smtplib.SMTP('email-smtp.us-east-1.amazonaws.com')#g.smtp_server)
+        session.set_debuglevel(1)
+        session.starttls()
+        session.login('SES_USER','SES_PASSWORD')
     def sendmail(email):
         try:
             mimetext = email.to_MIMEText()
