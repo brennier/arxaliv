@@ -22,6 +22,7 @@
 from r2.lib.db.thing import Thing, Relation, NotFound, MultiRelation, \
      CreationError
 from r2.lib.db.operators import desc
+from r2.lib.db.userrel import UserRel
 from r2.lib.utils import base_url, tup, domain, title_to_url, UrlParser
 from r2.lib.utils.trial_utils import trial_info
 from account import Account, DeletedUser
@@ -1337,3 +1338,5 @@ class ModeratorInbox(Relation(Subreddit, Message)):
                 i._commit()
                 res.append(i)
         return res
+
+class LinkSR(Relation(Link,Subreddit)): pass

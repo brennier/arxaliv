@@ -30,16 +30,19 @@ from r2.lib.utils.trial_utils import indict, end_trial, trial_info
 
 import string
 
-def insert(title, sr, url, description, date, author='ArxivBot'):
-    a = Account._by_name(author)
-
+def subreddit_or_create(name, author):
     try:
-        sr = Subreddit._new(name = sr, title = "Arxiv category %s"%sr.replace('_','-'),
-                            ip = '0.0.0.0', author_id = a._id, allow_top=True)
+        sr = Subreddit._new(name = name, title = "Arxiv category %s"%name.replace('_','-'),
+                            ip = '0.0.0.0', author_id = author._id, allow_top=True)
         sr.lang = "en"
         sr._commit()
     except SubredditExists:
-        sr = Subreddit._by_name(sr)
+        sr = Subreddit._by_name(name)
+    return sr
+
+def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=[]):
+    a = Account._by_name(author)
+    sr = subreddit_or_create(sr_name, a)
 
     try:
         l = Link._by_url(url, sr)
@@ -49,7 +52,6 @@ def insert(title, sr, url, description, date, author='ArxivBot'):
         print "Submitting link"
 
     user = a
-    #sr = random.choice(srs)
     l = Link(_ups = 1,
             title = title,
             url = url,
@@ -64,6 +66,8 @@ def insert(title, sr, url, description, date, author='ArxivBot'):
     l._date = datetime(date.year,date.month,date.day,tzinfo=g.tz)
     l.selftext = description
     l._commit()
+    for cross_sr in cross_srs:
+      LinkSR(l, subreddit_or_create(cross_sr, a))._commit()
     l.set_url_cache()
     #queries.queue_vote(user, l, True, '127.0.0.1')
     queries.new_savehide(l._save(user))
