@@ -1,4 +1,4 @@
-from r2.models import Account, Link, Comment, Trial, Vote, SaveHide
+from r2.models import Account, Link, Comment, Trial, Vote, SaveHide, LinkSR
 from r2.models import Message, Inbox, Subreddit, ModContribSR, ModeratorInbox
 from r2.lib.db.thing import Thing, Merge
 from r2.lib.db.operators import asc, desc, timeago
@@ -56,6 +56,11 @@ time_filtered_sorts = set(('top', 'controversial'))
 #we need to define the filter functions here so cachedresults can be pickled
 def filter_identity(x):
     return x
+
+def filter_thing1(x):
+    """A filter to apply to the results of a relationship query returns
+    the subject of the relationship."""
+    return x._thing1
 
 def filter_thing2(x):
     """A filter to apply to the results of a relationship query returns
@@ -299,6 +304,21 @@ def _get_links(sr_id, sort, time):
     res = make_results(q)
 
     return res
+
+def _get_links_new(sr_id, sort, time):
+    """General link query for a subreddit."""
+    q = LinkSR._query(Link.c._thing2_id == sr_id,
+                    sort = db_sort(sort),
+                    eager_load = True,
+                    thing_data = not g.use_query_cache)
+    
+    if time != 'all':
+        q._filter(db_times[time])
+    
+    res = make_results(q, filter_thing1)
+    
+    return res
+
 
 def get_spam_links(sr):
     q_l = Link._query(Link.c.sr_id == sr._id,

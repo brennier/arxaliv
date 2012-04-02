@@ -69,7 +69,7 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     for cross_sr in cross_srs:
       LinkSR(l, subreddit_or_create(cross_sr, a))._commit()
     l.set_url_cache()
-    #queries.queue_vote(user, l, True, '127.0.0.1')
+    queries.queue_vote(user, l, True, '127.0.0.1')
     queries.new_savehide(l._save(user))
 
     queries.new_link(l)
