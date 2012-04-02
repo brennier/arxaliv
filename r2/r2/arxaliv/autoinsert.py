@@ -67,7 +67,7 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     l.selftext = description
     l._commit()
     for cross_sr in cross_srs:
-      LinkSR(l, subreddit_or_create(cross_sr, a))._commit()
+      LinkSR(l, subreddit_or_create(cross_sr, a), 'crosspost')._commit()
     l.set_url_cache()
     queries.queue_vote(user, l, True, '127.0.0.1')
     queries.new_savehide(l._save(user))
@@ -88,14 +88,16 @@ import string
 
 URL = 'http://export.arxiv.org/oai2'
 
-arXiv_reader = MetadataReader(
+arXivRaw_reader = MetadataReader(
     fields={
-    'title':       ('textList', 'arXiv:arXiv/arXiv:title/text()'),
-    'categories':       ('textList', 'arXiv:arXiv/arXiv:categories/text()'),
-    'abstract':       ('textList', 'arXiv:arXiv/arXiv:abstract/text()'),
-    'id':       ('textList', 'arXiv:arXiv/arXiv:id/text()'),
-    'created':       ('textList', 'arXiv:arXiv/arXiv:created/text()'),
-    'keynames':      ('textList', 'arXiv:arXiv/arXiv:authors/arXiv:author/arXiv:keyname/text()'),
+    'title':       ('textList', 'arXivRaw:arXivRaw/arXivRaw:title/text()'),
+    'categories':       ('textList', 'arXivRaw:arXivRaw/arXivRaw:categories/text()'),
+    'abstract':       ('textList', 'arXivRaw:arXivRaw/arXivRaw:abstract/text()'),
+    'id':       ('textList', 'arXivRaw:arXivRaw/arXivRaw:id/text()'),
+    'authors':  ('textList', 'arXivRaw:arXivRaw/arXivRaw:authors/text()'),
+    'created':  ('textList', 'arXivRaw:arXivRaw/arXivRaw:version/arXivRaw:date/text()'),
+    #'created':       ('textList', 'arXivRaw:arXivRaw/arXivRaw:created/text()'),
+    #'keynames':      ('textList', 'arXivRaw:arXivRaw/arXivRaw:authors/arXivRaw:author/arXivRaw:keyname/text()'),
     #'title':       ('textList', 'oai_dc:dc/dc:title/text()'),
     #'creator':     ('textList', 'oai_dc:dc/dc:creator/text()'),
     #'subject':     ('textList', 'oai_dc:dc/dc:subject/text()'),
@@ -113,7 +115,7 @@ arXiv_reader = MetadataReader(
     #'rights':      ('textList', 'oai_dc:dc/dc:rights/text()')
     },
     namespaces={
-    'arXiv': 'http://arxiv.org/OAI/arXiv/',
+    'arXivRaw': 'http://arxiv.org/OAI/arXivRaw/',
     'dc' : 'http://purl.org/dc/elements/1.1/'
     }
     )
@@ -125,24 +127,25 @@ def run():
 
 def insertAll(time, time2):
     registry = MetadataRegistry()
-    registry.registerReader('arXiv', arXiv_reader)
+    registry.registerReader('arXivRaw', arXivRaw_reader)
     client = Client(URL, registry)
     client.updateGranularity()
-    list = client.listRecords(metadataPrefix='arXiv', from_=time, until=time2)
+    list = client.listRecords(metadataPrefix='arXivRaw', from_=time, until=time2)
     for a in list:
         a = list.next()
         title = '\n'.join(a[1]['title'])
-        sr2 = ' '.join(a[1]['categories']).replace('-','_').split(' ')
+        sr2 = str(' '.join(a[1]['categories']).replace('-','_')).split(' ')
         abstract = '\n'.join(a[1]['abstract'])
         url = 'http://arxiv.org/abs/' + a[1]['id'][0]
-        date = datetime.strptime(a[1]['created'][0],'%Y-%m-%d')
-        authors = '; '.join(a[1]['keynames'])
+        date = datetime.strptime(a[1]['created'][0], '%a, %d %b %Y %H:%M:%S %Z')
+        authors = a[1]['authors'][0]# '; '.join(a[1]['keynames'])
+	abstract = abstract + '\nBy: ' + authors + '\nIn: ' + ','.join(sr2)
         print title
         print sr2
         print abstract
         print url
         print date
         print authors
-        for sr in sr2:
-            insert(title + ' (' + authors + ')', str(sr), url, abstract, date=date)
+        #for sr in sr2:
+        insert(title + ' (' + authors + ')', 'fullarxiv', url, abstract, date=date, cross_srs=sr2)
 
