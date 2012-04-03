@@ -69,22 +69,22 @@ def static(path, allow_gzip=True):
         query = None
         suffix = '.gzip' if should_gzip and g.static_secure_pre_gzipped else ''
     else:
-        path_components.append(c.site.static_path)
-        query = None
-
-        if g.uncompressedJS:
-            query = 'v=' + str(random.randint(1, 1000000))
-
-            # unminified static files are in type-specific subdirectories
-            if not dirname and is_text:
-                path_components.append(extension[1:])
-
-            actual_filename = filename
-
         scheme = None
         domain = None
         suffix = ''
-
+        query = None
+    path_components.append(c.site.static_path)
+    
+    if g.uncompressedJS:
+        query = 'v=' + str(random.randint(1, 1000000))
+        
+        # unminified static files are in type-specific subdirectories
+        if not dirname and is_text:
+            path_components.append(extension[1:])
+        
+        actual_filename = filename
+    
+    
     path_components.append(dirname)
     if not actual_filename:
         actual_filename = g.static_names.get(filename, filename)
