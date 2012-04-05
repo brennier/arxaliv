@@ -60,6 +60,7 @@ class Link(Thing, Printable):
                      promoted = None,
                      pending = False,
                      disable_comments = False,
+                     multi_sr_id = [],
                      selftext = '',
                      noselfreply = False,
                      ip = '0.0.0.0')
@@ -67,6 +68,8 @@ class Link(Thing, Printable):
     _nsfw = re.compile(r"\bnsfw\b", re.I)
 
     def __init__(self, *a, **kw):
+        if kw.has_key('sr_id'):
+            kw.setdefault('multi_sr_id', [kw['sr_id']])
         Thing.__init__(self, *a, **kw)
     
     @property
@@ -533,6 +536,15 @@ class Link(Thing, Printable):
         on the wrapped link (as .subreddit), and that should be used
         when possible. """
         return Subreddit._byID(self.sr_id, True, return_dict = False)
+    
+    @property
+    def subreddits_slow(self):
+        from subreddit import Subreddit
+        """return's a link's subreddits. in most case the subreddit is already
+        on the wrapped link (as .subreddits), and that should be used
+        when possible. """
+        return [Subreddit._byID(id) for id in self.multi_sr_id]
+
 
 class LinksByUrl(tdb_cassandra.View):
     _use_db = True
@@ -727,6 +739,8 @@ class Comment(Thing, Printable):
 
             if not hasattr(item, 'subreddit'):
                 item.subreddit = item.subreddit_slow
+            #if not hasattr(item, 'subreddits'):
+            #    item.subreddits = item.subreddits_slow
             if item.author_id == item.link.author_id and not item.link._deleted:
                 add_attr(item.attribs, 'S',
                          link = item.link.make_permalink(item.subreddit))

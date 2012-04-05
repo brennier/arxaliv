@@ -494,20 +494,59 @@ def set_data(table, type_id, thing_id, **vals):
     i = table.insert(values = dict(thing_id = thing_id))
     u = table.update(sa.and_(table.c.thing_id == thing_id,
                              table.c.key == sa.bindparam('_key')))
+    d = table.delete(sa.and_(table.c.thing_id == thing_id,
+                             table.c.key == sa.bindparam('_key')))
 
     inserts = []
     for key, val in vals.iteritems():
-        val, kind = py2db(val, return_kind=True)
+        if key[0:5] == 'multi':
+            #vks = [py2db(v, return_kind=True) for v in vs]
+            #vals = [vk[0] for vk in vks]
+            val = [py2db(v, return_kind=False) for v in val]
+            kind = 'num'
 
-        #TODO one update?
-        if key in keys:
-            u.execute(_key = key, value = val, kind = kind)
+            #TODO one update?
+            if key in keys:
+                d.execute(_key = key)
+            for v in val:
+                inserts.append({'key':key, 'value':v, 'kind': kind})
         else:
-            inserts.append({'key':key, 'value':val, 'kind': kind})
+            val, kind = py2db(val, return_kind=True)
+
+            #TODO one update?
+            if key in keys:
+                u.execute(_key = key, value = val, kind = kind)
+            else:
+                inserts.append({'key':key, 'value':val, 'kind': kind})
+
 
     #do one insert
     if inserts:
         i.execute(*inserts)
+
+
+#TODO specify columns to return?
+def get_data(table, thing_id):
+    r, single = fetch_query(table, table.c.thing_id, thing_id)
+
+    #if single, only return one storage, otherwise make a dict
+    res = storage() if single else {}
+    for row in r:
+        val = db2py(row.value, row.kind)
+        stor = res if single else res.setdefault(row.thing_id, storage())
+        if single and row.thing_id != thing_id:
+            raise ValueError, ("tdb_sql.py: there's shit in the plumbing."
+                               + " got %s, wanted %s" % (row.thing_id,
+                                                         thing_id))
+        if row.key[0:5]=="multi":
+            stor.setdefault(row.key, []).append(val)
+        else:
+            stor[row.key] = val
+
+    return res
+
+
+
 
 def incr_data_prop(table, type_id, thing_id, prop, amount):
     t = table
@@ -537,7 +576,7 @@ def fetch_query(table, id_col, thing_id):
     return (r, single)
 
 #TODO specify columns to return?
-def get_data(table, thing_id):
+def get_data_blah(table, thing_id):
     r, single = fetch_query(table, table.c.thing_id, thing_id)
 
     #if single, only return one storage, otherwise make a dict

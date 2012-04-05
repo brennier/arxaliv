@@ -174,6 +174,12 @@ class Builder(object):
 
             if hasattr(item, "sr_id") and item.sr_id is not None:
                 w.subreddit = subreddits[item.sr_id]
+            if hasattr(item, "multi_sr_id") and item.multi_sr_id is not None:
+                if isinstance(item.multi_sr_id,list):
+                    w.subreddits = [subreddits[sr_id].name for sr_id in item.multi_sr_id]
+                else:
+                    w.subreddits = [subreddits[item.sr_id].name]
+
 
             w.likes = likes.get((user, item))
 

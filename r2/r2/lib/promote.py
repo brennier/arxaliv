@@ -117,7 +117,7 @@ def set_status(l, status, onchange = None):
 # query queue updates below
 
 def _sponsored_link_query(status, author_id = None):
-    q = Link._query(Link.c.sr_id == get_promote_srid(),
+    q = Link._query(Link.c.multi_sr_id == get_promote_srid(),
                     Link.c._spam == (True, False),
                     Link.c._deleted == (True,False),
                     sort = db_sort('new'))

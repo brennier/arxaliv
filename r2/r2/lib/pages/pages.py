@@ -1349,7 +1349,8 @@ class SubredditTopBar(CachedTemplate):
     def pop_reddits(self):
         if self._pop_reddits is None:
             p_srs = Subreddit.default_subreddits(ids = False,
-                                                 limit = Subreddit.sr_limit)
+                                                 limit = Subreddit.sr_limit,
+                                                 include_pop = True)
             self._pop_reddits = [ sr for sr in p_srs ]
                                   #if sr.name not in g.automatic_reddits ]
         return self._pop_reddits

@@ -71,9 +71,15 @@
 </%def>
 
 <%def name="subreddit()" buffered="True">
-  <a href="${thing.subreddit.path}.mobile" class="subreddit">
-    ${thing.subreddit.name}
-  </a>
+  %for i in thing.subreddits:
+      ${plain_link(i, "/r/"+i, sr_path = False,
+               cname = False, _class = "subreddit hover",
+               target='_blank' if thing.newwindow else '')}
+      <a href="/r/${i}/.mobile" class="subreddit">
+      ${i}
+      </a>
+      ,&nbsp;
+  %endfor
 </%def>
 
 

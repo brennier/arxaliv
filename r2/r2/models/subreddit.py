@@ -289,8 +289,12 @@ class Subreddit(Thing, Printable):
         srids = set(l.sr_id for l in links
                     if getattr(l, "sr_id", None) is not None)
         subreddits = {}
+        for l in links:
+            if getattr(l, "multi_sr_id", None) is not None:
+                srids.update(l.multi_sr_id if isinstance(l.multi_sr_id,list) else [l.multi_sr_id])
         if srids:
             subreddits = cls._byID(srids, data=True, stale=stale)
+
 
         if subreddits and c.user_is_loggedin:
             # dict( {Subreddit,Account,name} -> Relationship )
@@ -398,7 +402,7 @@ class Subreddit(Thing, Printable):
 
     @classmethod
     def default_subreddits(cls, ids = True, over18 = False, limit = g.num_default_reddits,
-                           stale=True):
+                           stale=True, include_pop=False):
         """
         Generates a list of the subreddits any user with the current
         set of language preferences and no subscriptions would see.
@@ -413,10 +417,11 @@ class Subreddit(Thing, Printable):
                            Subreddit._by_name(g.automatic_reddits, stale=stale).values())
 
         srs = []
-        #srs = cls.top_lang_srs(c.content_langs, limit + len(auto_srs),
-        #                       filter_allow_top = True,
-        #                       over18 = over18, ids = True,
-        #                       stale=stale)
+        if include_pop:
+            srs = cls.top_lang_srs(c.content_langs, limit + len(auto_srs),
+                               filter_allow_top = True,
+                               over18 = over18, ids = True,
+                               stale=stale)
 
         rv = []
         for sr in srs:
@@ -819,7 +824,7 @@ class _DefaultSR(FakeSubreddit):
                        for sr in srs]
             return queries.merge_results(*results)
         else:
-            q = Link._query(Link.c.sr_id == sr_ids,
+            q = Link._query(Link.c.multi_sr_id == sr_ids,
                             sort = queries.db_sort(sort), data=True)
             if time != 'all':
                 q._filter(queries.db_times[time])

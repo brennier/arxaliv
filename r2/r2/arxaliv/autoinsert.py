@@ -43,6 +43,28 @@ def subreddit_or_create(name, author):
 def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=[]):
     a = Account._by_name(author)
     sr = subreddit_or_create(sr_name, a)
+    srs = [subreddit_or_create(sr_name, a) for sr_name in cross_srs]
+    ups = 1
+    downs = 0
+    try:
+        ls = Link._by_url(url, None)
+        print 'Found %d links' % len(ls)
+        for l in ls:
+            if l.author_id == a._id and l.sr_id != sr._id:
+                ups = ups + l._ups - 1
+                downs = downs + l._downs
+		l._deleted=True
+		l._commit()
+                changed(l)
+                x = l.subreddit_slow
+                queries.delete_links(l)
+                print 'Deleting ' + str(l)
+            else:
+                print 'Not deleting ' + str(l)
+        print 'Seed votes %s %s' % (ups, downs)
+    except NotFound:
+        pass
+
 
     try:
         l = Link._by_url(url, sr)
@@ -51,8 +73,11 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     except NotFound:
         print "Submitting link"
 
+
+
     user = a
-    l = Link(_ups = 1,
+    l = Link(_ups = ups,
+            _downs = downs,
             title = title,
             url = url,
             _spam = False,
@@ -60,6 +85,7 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
             sr_id = sr._id,
             lang = sr.lang,
             ip = '127.0.0.1',
+            multi_sr_id = [sr._id]+[sr._id for sr in srs],
             selftext = description)
     l.verdict = 'admin-approved'
     l.approval_checkmark = _("auto-approved")
@@ -122,7 +148,7 @@ arXivRaw_reader = MetadataReader(
 
 def run():
     time2 = datetime.now(tz=None)
-    time = time2 - timedelta(days=2)
+    time = time2 - timedelta(days=7)
     insertAll(time, None)
 
 def insertAll(time, time2):
@@ -131,21 +157,26 @@ def insertAll(time, time2):
     client = Client(URL, registry)
     client.updateGranularity()
     list = client.listRecords(metadataPrefix='arXivRaw', from_=time, until=time2)
+    errors = 0
     for a in list:
-        a = list.next()
-        title = '\n'.join(a[1]['title'])
-        sr2 = str(' '.join(a[1]['categories']).replace('-','_')).split(' ')
-        abstract = '\n'.join(a[1]['abstract'])
-        url = 'http://arxiv.org/abs/' + a[1]['id'][0]
-        date = datetime.strptime(a[1]['created'][0], '%a, %d %b %Y %H:%M:%S %Z')
-        authors = a[1]['authors'][0]# '; '.join(a[1]['keynames'])
-	abstract = abstract + '\nBy: ' + authors + '\nIn: ' + ','.join(sr2)
-        print title
-        print sr2
-        print abstract
-        print url
-        print date
-        print authors
-        #for sr in sr2:
-        insert(title + ' (' + authors + ')', 'fullarxiv', url, abstract, date=date, cross_srs=sr2)
-
+        #a = list.next()
+        try:
+            title = '\n'.join(a[1]['title'])
+            sr2 = str(' '.join(a[1]['categories']).replace('-','_')).split(' ')
+            abstract = '\n'.join(a[1]['abstract'])
+            url = 'http://arxiv.org/abs/' + a[1]['id'][0]
+            date = datetime.strptime(a[1]['created'][0], '%a, %d %b %Y %H:%M:%S %Z')
+            authors = a[1]['authors'][0]# '; '.join(a[1]['keynames'])
+            abstract = abstract + '\nBy: ' + authors + '\nIn: ' + ', '.join(sr2)
+            print title
+            print sr2
+            print abstract
+            print url
+            print date
+            print authors
+            insert(title + ' (' + authors + ')', str("fullarxiv"), url, abstract, date=date, cross_srs=sr2)
+        except:
+            print 'ERROR'
+            print a
+            errors = errors+1
+    print 'Completed with %s errors' % errors

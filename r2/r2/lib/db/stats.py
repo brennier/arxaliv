@@ -67,7 +67,7 @@ def default_queries():
     from copy import deepcopy
     queries = []
 
-    q = Link._query(Link.c.sr_id == Subreddit.user_subreddits(None),
+    q = Link._query(Link.c.multi_sr_id == Subreddit.user_subreddits(None),
                     sort = desc('_hot'),
                     limit = 37)
 

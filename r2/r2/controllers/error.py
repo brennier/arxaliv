@@ -189,7 +189,7 @@ class ErrorController(RedditController):
                 randmin = {'admin': rand.choice(self.admins)}
                 failien_name = 'youbrokeit%d.png' % rand.randint(1, NUM_FAILIENS)
                 failien_url = static(failien_name)
-                return redditbroke % (failien_url, rand_strings.sadmessages % randmin)
+                return redditbroke % (failien_url,'Error') #rand_strings.sadmessages % randmin)
             elif code == 503:
                 return self.send503()
             elif code == 304:

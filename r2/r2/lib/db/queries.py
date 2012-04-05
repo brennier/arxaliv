@@ -233,6 +233,7 @@ class MergedCachedResults(object):
             all_items.extend(cr.data)
         all_items.sort(cmp=comparator)
         self.data = all_items
+        self.last_iter = None
 
 
     def __repr__(self):
@@ -240,7 +241,9 @@ class MergedCachedResults(object):
 
     def __iter__(self):
         for x in self.data:
-            yield x[0]
+            if x[0] != self.last_iter:
+                yield x[0]
+                self.last_iter = x[0]
 
     def update(self):
         for x in self.cached_results:
@@ -294,7 +297,7 @@ def get_links(sr, sort, time):
 
 def _get_links(sr_id, sort, time):
     """General link query for a subreddit."""
-    q = Link._query(Link.c.sr_id == sr_id,
+    q = Link._query(Link.c.multi_sr_id == sr_id,
                     sort = db_sort(sort),
                     data = True)
 
@@ -610,6 +613,9 @@ def new_link(link):
     author = Account._byID(link.author_id)
 
     results = [get_links(sr, 'new', 'all')]
+    for sr in link.multi_sr_id:
+         results.append(_get_links(sr, 'new', 'all'))
+
     # we don't have to do hot/top/controversy because new_vote will do
     # that
 
@@ -620,6 +626,9 @@ def new_link(link):
 
     if link._spam:
         results.append(get_spam_links(sr))
+        #for sr in link.multi_sr_id:
+        #    results.append(get_spam_links(sr, 'new', 'all'))
+
 
     add_queries(results, insert_items = link)
     amqp.add_item('new_link', link._fullname)
@@ -703,6 +712,11 @@ def new_vote(vote, foreground=False):
                             get_links(sr, 'top', 'all'),
                             get_links(sr, 'controversial', 'all'),
                             ])
+            for sr in item.multi_sr_id:
+                 results.append(_get_links(sr, 'hot', 'all'))
+                 results.append(_get_links(sr, 'top', 'all'))
+                 results.append(_get_links(sr, 'controversial', 'all'))
+
 
             for domain in utils.UrlParser(item.url).domain_permutations():
                 for sort in ("hot", "top", "controversial"):

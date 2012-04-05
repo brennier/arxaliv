@@ -54,7 +54,8 @@ searchable_langs    = set(['dk','nl','en','fi','fr','de','it','no','nn','pt',
 ## Adding types is a matter of adding the class to indexed_types here,
 ## adding the fields from that type to search_fields below, and adding
 ## those fields to Solr's configuration
-indexed_types = (Subreddit, Link)
+#indexed_types = (Subreddit, Link)
+indexed_types = (Subreddit, )
 
 
 class Field(object):
@@ -667,6 +668,9 @@ def run_changed(drain=False):
         last run. Note: unlike many queue-using functions, this one is
         run from cron and totally drains the queue before terminating
     """
+    @g.stats.amqp_processor('noop')
+    def _run_changed_noop(msgs, chan):
+        print "changed: Processing %d items" % len(msgs)
     @g.stats.amqp_processor('solrsearch_changes')
     def _run_changed(msgs, chan):
         print "changed: Processing %d items" % len(msgs)

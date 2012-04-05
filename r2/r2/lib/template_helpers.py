@@ -76,7 +76,7 @@ def static(path, allow_gzip=True):
     path_components.append(c.site.static_path)
     
     if g.uncompressedJS:
-        query = 'v=' + str(random.randint(1, 1000000))
+        #query = 'v=' + str(random.randint(1, 1000000))
         
         # unminified static files are in type-specific subdirectories
         if not dirname and is_text:
