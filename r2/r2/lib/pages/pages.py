@@ -22,7 +22,7 @@
 from r2.lib.wrapped import Wrapped, Templated, CachedTemplate
 from r2.models import Account, FakeAccount, DefaultSR, make_feedurl
 from r2.models import FakeSubreddit, Subreddit, Ad, AdSR
-from r2.models import Friends, All, Sub, NotFound, DomainSR, Random, Mod, RandomNSFW, MultiReddit
+from r2.models import Friends, All, Sub, NotFound, DomainSR, Random, Mod, RandomNSFW, MultiReddit, ModSR
 from r2.models import Link, Printable, Trophy, bidding, PromotionWeights, Comment
 from r2.models import Flair, FlairTemplate, FlairTemplateBySubredditIndex
 from r2.models.oauth2 import OAuth2Client
@@ -125,6 +125,7 @@ class Reddit(Templated):
     enable_login_cover = True
     site_tracking      = True
     show_firsttext     = True
+    css_class          = None
     additional_css     = None
     extra_page_classes = None
 
@@ -203,6 +204,7 @@ class Reddit(Templated):
 
         buttons.extend([
                 NamedButton('traffic', css_class = 'reddit-traffic'),
+                NamedButton('modqueue', css_class = 'reddit-modqueue'),
                 NamedButton('reports', css_class = 'reddit-reported'),
                 NamedButton('spam', css_class = 'reddit-spam'),
                 NamedButton('banned', css_class = 'reddit-ban'),
@@ -233,7 +235,7 @@ class Reddit(Templated):
             ps.append(SponsorshipBox())
 
         no_ads_yet = True
-        if isinstance(c.site, MultiReddit) and c.user_is_loggedin:
+        if isinstance(c.site, (MultiReddit, ModSR)) and c.user_is_loggedin:
             srs = Subreddit._byID(c.site.sr_ids,data=True,
                                   return_dict=False)
             if srs:
@@ -680,9 +682,11 @@ class BoringPage(Reddit):
     
     extension_handling= False
     
-    def __init__(self, pagename, **context):
+    def __init__(self, pagename, css_class=None, **context):
         self.pagename = pagename
         name = c.site.name or g.default_sr
+        if css_class:
+            self.css_class = css_class
         if "title" not in context:
             context['title'] = "%s: %s" % (name, pagename)
 
@@ -746,6 +750,21 @@ class RegisterPage(LoginPage):
     @classmethod
     def login_template(cls, **kw):
         return Register(**kw)
+
+class AdminModeInterstitial(BoringPage):
+    def __init__(self, dest, *args, **kwargs):
+        self.dest = dest
+        BoringPage.__init__(self, _("turn admin on"),
+                            show_sidebar=False,
+                            *args, **kwargs)
+
+    def content(self):
+        return PasswordVerificationForm(dest=self.dest)
+
+class PasswordVerificationForm(Templated):
+    def __init__(self, dest):
+        self.dest = dest
+        Templated.__init__(self)
 
 class Login(Templated):
     """The two-unit login and register form."""
@@ -3770,3 +3789,8 @@ class UserIPHistory(Templated):
     def __init__(self):
         self.ips = ips_by_account_id(c.user._id)
         super(UserIPHistory, self).__init__()
+
+class ApiHelp(Templated):
+    def __init__(self, api_docs, *a, **kw):
+        self.api_docs = api_docs
+        super(ApiHelp, self).__init__(*a, **kw)

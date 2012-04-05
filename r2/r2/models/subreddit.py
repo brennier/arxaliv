@@ -934,6 +934,7 @@ class ModContribSR(_DefaultSR):
     def path(self):
         return '/r/' + self.real_path
 
+    @property
     def sr_ids(self):
         if c.user_is_loggedin:
             return Subreddit.special_reddits(c.user, self.query_param)
@@ -941,7 +942,7 @@ class ModContribSR(_DefaultSR):
             return []
 
     def get_links(self, sort, time):
-        return self.get_links_sr_ids(self.sr_ids(), sort, time)
+        return self.get_links_sr_ids(self.sr_ids, sort, time)
 
 class ModSR(ModContribSR):
     name  = "communities you moderate"

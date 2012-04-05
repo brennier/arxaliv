@@ -60,9 +60,11 @@ class ModAction(tdb_cassandra.UuidThing, Printable):
 
     _details_text = {# approve comment/link
                      'unspam': _('unspam'),
+                     'confirm_ham': _('confirmed ham'),
                      # remove comment/link
                      'confirm_spam': _('confirmed spam'),
-                     'not_spam': _('not spam'),
+                     'remove': _('removed not spam'),
+                     'spam': _('removed spam'),
                      # removemoderator
                      'remove_self': _('removed self'),
                      # editsettings

@@ -122,13 +122,11 @@
     %if getattr(thing, "moderator_banned", None):
       <!-- pass -->
     %elif thing._spam:
-      ${pretty_button(_("confirm %(obj)s removal") % dict(obj=kind),
-      "big_mod_action", -1, "negative")}
+      ${pretty_button(_("confirm spam"), "big_mod_action", -2, "negative")}
+      ${pretty_button(_("remove ham"), "big_mod_action", -1, "neutral")}
     %else:
-      ${pretty_button(_("spam %(obj)s") % dict(obj=kind),
-                      "big_mod_action", -2, "negative")}
-      ${pretty_button(_("remove %(obj)s") % dict(obj=kind),
-                      "big_mod_action", -1, "neutral")}
+      ${pretty_button(_("spam"), "big_mod_action", -2, "negative")}
+      ${pretty_button(_("remove"), "big_mod_action", -1, "neutral")}
     %endif
 
     %if getattr(thing, "approval_checkmark", None):

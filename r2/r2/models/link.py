@@ -28,7 +28,7 @@ from r2.lib.utils.trial_utils import trial_info
 from account import Account, DeletedUser
 from subreddit import Subreddit
 from printable import Printable
-from r2.config import cache
+from r2.config import cache, extensions
 from r2.lib.memoize import memoize
 from r2.lib.filters import _force_utf8
 from r2.lib import utils
@@ -220,6 +220,10 @@ class Link(Thing, Printable):
 
             if wrapped.hidden:
                 return False
+
+        # Don't hide from API users
+        if c.render_style in extensions.API_TYPES:
+            return True
 
         # hide NSFW links from non-logged users and under 18 logged users 
         # if they're not explicitly visiting an NSFW subreddit or a multireddit
@@ -592,9 +596,11 @@ class PromotedLink(Link):
 
 class Comment(Thing, Printable):
     _data_int_props = Thing._data_int_props + ('reported',)
-    _defaults = dict(reported = 0, parent_id = None, 
-                     moderator_banned = False, new = False, 
-                     banned_before_moderator = False)
+    _defaults = dict(reported=0,
+                     parent_id=None,
+                     moderator_banned=False,
+                     new=False,
+                     banned_before_moderator=False)
     _essentials = ('link_id', 'author_id')
 
     def _markdown(self):
@@ -939,9 +945,16 @@ class MoreChildren(MoreComments):
     pass
 
 class Message(Thing, Printable):
-    _defaults = dict(reported = 0, was_comment = False, parent_id = None,
-                     new = False,  first_message = None, to_id = None,
-                     sr_id = None, to_collapse = None, author_collapse = None)
+    _defaults = dict(reported=0,
+                     was_comment=False,
+                     parent_id=None,
+                     new=False,
+                     first_message=None,
+                     to_id=None,
+                     sr_id=None,
+                     to_collapse=None,
+                     author_collapse=None,
+                     from_sr=False)
     _data_int_props = Thing._data_int_props + ('reported', )
     _essentials = ('author_id',)
     cache_ignore = set(["to", "subreddit"]).union(Printable.cache_ignore)

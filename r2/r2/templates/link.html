@@ -156,6 +156,10 @@
 ${parent.thing_css_class(what)} ${"over18" if thing.over_18 else ""}
 </%def>
 
+<%def name="thing_data_attributes(what)" buffered="True">
+${parent.thing_data_attributes(what)} data-ups="${what.upvotes}" data-downs="${what.downvotes}"
+</%def>
+
 <%def name="subreddit()" buffered="True">
   %for i in thing.subreddits:
       ${plain_link(i, "/r/"+i, sr_path = False,

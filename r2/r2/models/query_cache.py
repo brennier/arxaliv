@@ -1,10 +1,9 @@
 import random
-import cPickle
 import datetime
 import collections
 
 from pylons import g
-from pycassa.system_manager import ASCII_TYPE
+from pycassa.system_manager import ASCII_TYPE, UTF8_TYPE
 from pycassa.batch import Mutator
 
 from r2.models import Thing
@@ -17,6 +16,17 @@ from r2.lib.utils import flatten, to36
 CONNECTION_POOL = g.cassandra_pools['main']
 PRUNE_CHANCE = g.querycache_prune_chance
 MAX_CACHED_ITEMS = 1000
+LOG = g.log
+
+
+# if cjson is installed, use it. it's faster.
+try:
+    import cjson as json
+except ImportError:
+    LOG.warning("Couldn't import cjson. Using (slower) python implementation.")
+    import json
+else:
+    json.dumps, json.loads = json.encode, json.decode
 
 
 class ThingTupleComparator(object):
@@ -68,6 +78,7 @@ class CachedQuery(CachedQueryBase):
         self.model = model
         self.key = key
         self.query = query
+        self.query._limit = MAX_CACHED_ITEMS  # .update() should only get as many items as we need
         self.filter = filter_fn
         self.timestamps = None  # column timestamps, for safe pruning
         super(CachedQuery, self).__init__(query._sort)
@@ -163,6 +174,10 @@ class CachedQuery(CachedQueryBase):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __repr__(self):
+        return "%s(%s, %r)" % (self.__class__.__name__,
+                               self.model.__name__, self.key)
+
 
 class MergedCachedQuery(CachedQueryBase):
     def __init__(self, queries):
@@ -187,18 +202,16 @@ class CachedQueryMutator(object):
         self.to_prune = set()
 
     def __enter__(self):
-        self.mutator.__enter__()
         return self
 
     def __exit__(self, type, value, traceback):
-        self.mutator.__exit__(type, value, traceback)
-
-        if self.to_prune:
-            CachedQuery._prune_multi(self.to_prune)
+        self.send()
 
     def insert(self, query, things):
         if not things:
             return
+
+        LOG.debug("Inserting %r into query %r", things, query)
 
         query._insert(self.mutator, things)
 
@@ -209,7 +222,16 @@ class CachedQueryMutator(object):
         if not things:
             return
 
+        LOG.debug("Deleting %r from query %r", things, query)
+
         query._delete(self.mutator, things)
+
+    def send(self):
+        self.mutator.send()
+
+        if self.to_prune:
+            LOG.debug("Pruning queries %r", self.to_prune)
+            CachedQuery._prune_multi(self.to_prune)
 
 
 def filter_identity(x):
@@ -260,7 +282,8 @@ def merged_cached_query(fn):
 class BaseQueryCache(object):
     __metaclass__ = tdb_cassandra.ThingMeta
     _connection_pool = 'main'
-    _extra_schema_creation_args = dict(key_validation_class=ASCII_TYPE)
+    _extra_schema_creation_args = dict(key_validation_class=ASCII_TYPE,
+                                       default_validation_class=UTF8_TYPE)
     _compare_with = ASCII_TYPE
     _use_db = False
 
@@ -269,7 +292,8 @@ class BaseQueryCache(object):
 
     @classmethod
     def get(cls, keys):
-        rows = cls._cf.multiget(keys, include_timestamp=True)
+        rows = cls._cf.multiget(keys, include_timestamp=True,
+                                column_count=tdb_cassandra.max_column_count)
 
         res = {}
         for row, columns in rows.iteritems():
@@ -277,8 +301,8 @@ class BaseQueryCache(object):
             timestamps = []
 
             for (key, (value, timestamp)) in columns.iteritems():
-                value = cPickle.loads(value)
-                data.append((key,) + value)
+                value = json.loads(value)
+                data.append((key,) + tuple(value))
                 timestamps.append((key, timestamp))
 
             res[row] = (data, dict(timestamps))
@@ -288,7 +312,7 @@ class BaseQueryCache(object):
     @classmethod
     @tdb_cassandra.will_write
     def insert(cls, mutator, key, columns):
-        updates = dict((key, cPickle.dumps(value, protocol=2))
+        updates = dict((key, json.dumps(value))
                        for key, value in columns.iteritems())
         mutator.insert(cls._cf, key, updates)
 
