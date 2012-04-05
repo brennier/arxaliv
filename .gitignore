@@ -46,3 +46,5 @@ r2/r2/lib/wrapped.c
 r2/r2/models/_builder.c
 build/
 srv/*/log/main/*
+example.ini
+r2/example.ini
