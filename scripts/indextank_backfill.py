@@ -26,9 +26,10 @@ from time import sleep
 from r2.lib.db.operators import asc, desc
 from pylons import g
 
-def run(verbose=True, sleep_time = 60, num_items = 1):
+def run(verbose=True, sleep_time = 60, num_items = 1, cursor=None):
     key = "indextank_cursor"
-    cursor = g.cache.get(key)
+    if cursor is None:
+        cursor = g.cache.get(key)
     if cursor is None:
         raise ValueError("%s is not set!" % key)
     cursor = int(cursor)

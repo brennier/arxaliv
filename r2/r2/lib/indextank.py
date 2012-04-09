@@ -307,4 +307,4 @@ def run_changed(drain=False, limit=1000):
                   ))
 
     amqp.handle_items('indextank_changes', _run_changed, limit=limit,
-                      drain=drain, verbose=False)
+                      drain=drain, verbose=False, sleep_time=1000)

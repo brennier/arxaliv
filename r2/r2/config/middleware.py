@@ -333,7 +333,10 @@ class DomainMiddleware(object):
                 environ['reddit-prefer-lang'] = sd
                 environ['reddit-domain-prefix'] = sd
             else:
-                sr_redirect = sd
+                if sr_redirect:
+                    sr_redirect = sr_redirect + '.' + sd
+                else:
+                    sr_redirect = sd
                 sub_domains.remove(sd)
 
         if sr_redirect and environ.get("FULLPATH"):

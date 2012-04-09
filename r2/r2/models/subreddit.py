@@ -80,8 +80,8 @@ class Subreddit(Thing, Printable):
     _essentials = ('type', 'name', 'lang')
     _data_int_props = Thing._data_int_props + ('mod_actions', 'reported')
 
-    sr_limit = 50
-    gold_limit = 100
+    sr_limit = 500
+    gold_limit = 1000
     DEFAULT_LIMIT = object()
 
     # note: for purposely unrenderable reddits (like promos) set author_id = -1
@@ -289,8 +289,12 @@ class Subreddit(Thing, Printable):
         srids = set(l.sr_id for l in links
                     if getattr(l, "sr_id", None) is not None)
         subreddits = {}
+        for l in links:
+            if getattr(l, "multi_sr_id", None) is not None:
+                srids.update(l.multi_sr_id if isinstance(l.multi_sr_id,list) else [l.multi_sr_id])
         if srids:
             subreddits = cls._byID(srids, data=True, stale=stale)
+
 
         if subreddits and c.user_is_loggedin:
             # dict( {Subreddit,Account,name} -> Relationship )
@@ -398,7 +402,7 @@ class Subreddit(Thing, Printable):
 
     @classmethod
     def default_subreddits(cls, ids = True, over18 = False, limit = g.num_default_reddits,
-                           stale=True):
+                           stale=True, include_pop=False):
         """
         Generates a list of the subreddits any user with the current
         set of language preferences and no subscriptions would see.
@@ -412,7 +416,9 @@ class Subreddit(Thing, Printable):
             auto_srs = map(lambda sr: sr._id,
                            Subreddit._by_name(g.automatic_reddits, stale=stale).values())
 
-        srs = cls.top_lang_srs(c.content_langs, limit + len(auto_srs),
+        srs = []
+        if include_pop:
+            srs = cls.top_lang_srs(c.content_langs, limit + len(auto_srs),
                                filter_allow_top = True,
                                over18 = over18, ids = True,
                                stale=stale)
@@ -482,6 +488,8 @@ class Subreddit(Thing, Printable):
                                                       data=True,
                                                       return_dict=False,
                                                       stale=stale)
+        #elif user:
+        #    return []
         else:
             return cls.default_subreddits(ids = ids, over18=over18,
                                           limit=g.num_default_reddits,
@@ -798,7 +806,7 @@ class AllSR(FakeSubreddit):
 
 class _DefaultSR(FakeSubreddit):
     #notice the space before reddit.com
-    name = ' reddit.com'
+    name = ' arxaliv.org'
     path = '/'
     header = g.default_header_url
 
@@ -816,7 +824,7 @@ class _DefaultSR(FakeSubreddit):
                        for sr in srs]
             return queries.merge_results(*results)
         else:
-            q = Link._query(Link.c.sr_id == sr_ids,
+            q = Link._query(Link.c.multi_sr_id == sr_ids,
                             sort = queries.db_sort(sort), data=True)
             if time != 'all':
                 q._filter(queries.db_times[time])
@@ -975,7 +983,7 @@ class DomainSR(FakeSubreddit):
         FakeSubreddit.__init__(self)
         self.domain = domain
         self.name = domain 
-        self.title = domain + ' ' + _('on reddit.com')
+        self.title = domain + ' ' + _('on arxaliv.org')
 
     def get_links(self, sort, time):
         from r2.lib.db import queries

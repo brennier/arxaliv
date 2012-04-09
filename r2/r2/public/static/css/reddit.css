@@ -5,6 +5,11 @@ html {
 body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,p,blockquote,th,td,iframe {
   margin:0;
   padding:0;
+  /*background-color: #ffffff;*/
+}
+
+body {
+  background-color: #ffefef
 }
 
 table { border-collapse:collapse; }
@@ -179,8 +184,10 @@ ul.flat-vert {text-align: left;}
     border-bottom: 1px solid #5f99cf;
 
     position: relative;
-    background-color: #cee3f8;
+    /*background-color: #cee3f8;*/
     z-index: 99;
+    background-color:#f8e3ce;
+
 }
 
 #header-img {margin-top: 2px; margin-right: 5px;}
@@ -494,7 +501,7 @@ ul.flat-vert {text-align: left;}
 }
 
 .sidebox.create .spacer a {
-    background-image: url(../create-a-reddit.png);  /* SPRITE */
+    background-image: url(../community.jpg);  /* SPRITE */
     background-repeat:no-repeat;
 }
 
@@ -530,7 +537,7 @@ ul.flat-vert {text-align: left;}
 }
 
 .sidebox.submit .spacer a {
-    background-image: url(../submit-alien.png);  /* SPRITE */
+    background-image: url(../link.jpg);  /* SPRITE */
     background-repeat:no-repeat;
 }
 
@@ -5139,6 +5146,96 @@ tr.gold-accent + tr > td {
 .modactions.marknsfw {
     background-image: url(../modactions_marknsfw.png); /* SPRITE */
 }
+
+/*.down { display: none }*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*body {
+    background: #fafafa
+    }*/
+/* Header */
+/*#header {
+    background: #000000;
+    border-bottom: 1px solid #000000
+    }
+#header-bottom-right {
+    border-top: 1px solid #000000;
+    border-left: 1px solid #000000;
+    -moz-border-radius-topleft: 3px !important
+    }*/
+/* Menu */
+/*#sr-header-area {
+    background: #000000;
+    color: #ffffff
+    }
+#sr-header-area div span, #sr-header-area ul li a {
+    color: #ffffff
+    }
+#sr-header-area ul li a:hover {
+    color: #ffff00;
+    background: #000000
+    }*/
+/* Tab menu */
+/*ul.tabmenu li a, li.selected a {
+    border: 1px solid #000000;
+    border-bottom: none;
+    -moz-border-radius-topleft: 3px !important;
+    -moz-border-radius-topright: 3px !important
+    }*/
+/* Dropdown */
+/*.drop-choices {
+    border: 1px solid #000;
+    background: #ebebeb
+    }
+.drop-choices a:link, .drop-choices a:visited {
+    color: #000000
+    }*/
+/*#sr-header-area div a:hover {
+    background: #888888;
+    color: #ffff00
+    }*/
+/*#header-bottom-left {
+    background: #263a5b url(http://thumbs.reddit.com/t5_2rkgw_5.png) no-repeat right center;
+    color: #ffffff
+    }
+#header-bottom-left span.redditname a {
+    color: #ffffff;
+    background: #263a5b
+    }*/
+/* Side Table */
+/*div.side {
+    float: right;
+    padding: 0 10px 0 10px;
+    margin: 0 0 0 10px;
+    border-left: 1px solid #000000;
+    border-bottom: 1px solid #000000;
+    display: block;
+    -moz-border-radius-bottomleft: 3px !important
+    }
+/* Right Column */
+/*div.titlebox span.number:after {
+    content: " Jumpers"
+    }
+div.titlebox span.word {
+    display: none
+    }
+.sheets {
+    margin-right: 350px
+    }
+.thing {
+    margin-bottom: 12px
+    }*/
 
 .adminpasswordform {
     margin-bottom: .5em;

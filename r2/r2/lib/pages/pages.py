@@ -348,13 +348,14 @@ class Reddit(Templated):
         is a list of menus which will be rendered in order and
         displayed at the top of the Reddit."""
         if c.site == Friends:
-            main_buttons = [NamedButton('new', dest='', aliases=['/hot']),
+            main_buttons = [NamedButton('top', dest=''),
                             NamedButton('comments')]
         else:
-            main_buttons = [NamedButton('hot', dest='', aliases=['/hot']),
+            main_buttons = [
+                            NamedButton('top', dest='/'),
+                            NamedButton('hot', aliases=['/hot']),
                             NamedButton('new'), 
                             NamedButton('controversial'),
-                            NamedButton('top'),
                             ]
 
             if c.user_is_loggedin or not g.read_only_mode:
@@ -474,6 +475,7 @@ class RedditFooter(CachedTemplate):
                 type = "flat_vert",
                 separator = "")
         ]
+        self.nav = []
         CachedTemplate.__init__(self)
 
 class ClickGadget(Templated):
@@ -1114,7 +1116,7 @@ class SubredditsPage(Reddit):
         self.searchbar = SearchBar(prev_search = prev_search,
                                    elapsed_time = elapsed_time,
                                    num_results = num_results,
-                                   header = _('search reddits'),
+                                   header = _('search arxalivs'),
                                    search_params = {},
                                    simple=True,
                                    subreddit_search=True
@@ -1366,9 +1368,10 @@ class SubredditTopBar(CachedTemplate):
     def pop_reddits(self):
         if self._pop_reddits is None:
             p_srs = Subreddit.default_subreddits(ids = False,
-                                                 limit = Subreddit.sr_limit)
-            self._pop_reddits = [ sr for sr in p_srs
-                                  if sr.name not in g.automatic_reddits ]
+                                                 limit = Subreddit.sr_limit,
+                                                 include_pop = True)
+            self._pop_reddits = [ sr for sr in p_srs ]
+                                  #if sr.name not in g.automatic_reddits ]
         return self._pop_reddits
 
     @property
@@ -1384,7 +1387,7 @@ class SubredditTopBar(CachedTemplate):
                                            css_class = 'bottom-option',
                                            dest = '/reddits/'))
         return SubredditMenu(drop_down_buttons,
-                             title = _('my reddits'),
+                             title = _('my arxalivs'),
                              type = 'srdrop')
 
     def subscribed_reddits(self):
@@ -3035,7 +3038,7 @@ def make_link_child(item):
             link_child = MediaChild(item, media_embed, load = True)
 
     # if the item is_self, add a selftext child
-    elif item.is_self:
+    elif item.is_self or item.selftext:
         if not item.selftext: item.selftext = u''
 
         expand = getattr(item, 'expand_children', False)

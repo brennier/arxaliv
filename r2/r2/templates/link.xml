@@ -56,9 +56,12 @@
       submitted by <a href="http://${domain}/user/${thing.author.name}">
          ${thing.author.name}
       </a>
-       %if thing.different_sr:
-        to <a href="http://${domain}${thing.subreddit.path}">
-         ${thing.subreddit.name}</a> 
+      %if thing.different_sr or True:
+        to
+        %for i in thing.subreddits:
+           <a href="http://${domain}/r/${i}">
+           ${i}</a>,&nbsp;
+        %endfor
       %endif
       <br/>
       <a href="${thing.url}">[link]</a>

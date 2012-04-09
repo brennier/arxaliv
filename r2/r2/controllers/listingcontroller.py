@@ -820,7 +820,7 @@ class RedditsController(ListingController):
     render_cls = SubredditsPage
 
     def title(self):
-        return _('reddits')
+        return _('arxalivs')
 
     def query(self):
         if self.where == 'banned' and c.user_is_admin:
@@ -849,8 +849,8 @@ class RedditsController(ListingController):
                 # don't try to render special subreddits (like promos)
                 reddits._filter(Subreddit.c.author_id != -1)
 
-            if not c.over18:
-                reddits._filter(Subreddit.c.over_18 == False)
+            #if not c.over18:
+            #    reddits._filter(Subreddit.c.over_18 == False)
 
         return reddits
 
@@ -874,7 +874,7 @@ class MyredditsController(ListingController):
                         default = 'subscriber', type = "flatlist")]
 
     def title(self):
-        return _('reddits: ') + self.where
+        return _('arxalivs: ') + self.where
 
     def query(self):
         reddits = SRMember._query(SRMember.c._name == self.where,

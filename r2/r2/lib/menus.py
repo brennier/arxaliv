@@ -1,4 +1,3 @@
-# The contents of this file are subject to the Common Public Attribution
 # License Version 1.0. (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://code.reddit.com/LICENSE. The License is based on the Mozilla Public
@@ -136,7 +135,7 @@ menu =   MenuHandler(hot          = _('hot'),
 
                      popular      = _("popular"),
                      create       = _("create"),
-                     mine         = _("my reddits"),
+                     mine         = _("my arxalivs"),
 
                      i18n         = _("help translate"),
                      errors       = _("errors"),
@@ -463,7 +462,7 @@ class RecSortMenu(SortMenu):
 
 class NewMenu(SimplePostMenu):
     name      = 'sort'
-    default   = 'rising'
+    default   = 'new'
     options   = ('new', 'rising')
     type = 'flatlist'
     use_post  = True

@@ -133,12 +133,13 @@ string_dict = dict(
 
     submit_link = _("""You are submitting a link. The key to a successful submission is interesting content and a descriptive title."""),
     submit_text = _("""You are submitting a text-based post. Speak your mind. A title is required, but expanding further in the text field is not. Beginning your title with "vote up if" is violation of intergalactic law."""),
-    iphone_first = _("You should consider using [reddit's mobile interface](http://i.reddit.com/)."),
+    iphone_first = _("You should consider using [arxaliv's mobile interface](http://arxaliv.org/try.compact?dest=/.mobile)."),
     verify_email = _("we're going to need to verify your email address for you to proceed."),
     verify_email_submit = _("you'll be able to submit more frequently once you verify your email address"),
     email_verified =  _("your email address has been verfied"),
     email_verify_failed = _("Verification failed.  Please try that again"),
-    search_failed = _("Our search machines are under too much load to handle your request right now. :( Sorry for the inconvenience. Try again in a little bit -- but please don't mash reload; that only makes the problem worse."),
+    #search_failed = _("Our search machines are under too much load to handle your request right now. :( Sorry for the inconvenience. Try again in a little bit -- but please don't mash reload; that only makes the problem worse."),
+    search_failed = _("Searching through the names of categories does not work yet, but you can try a full-text search instead.  You may have been brought here by mistyping a name, in which case you should double-check it"),
     invalid_search_query = _("I couldn't understand your query, so I simplified it and searched for \"%(clean_query)s\" instead."),
     completely_invalid_search_query = _("I couldn't understand your search query. Please try again."),
     generic_quota_msg = _("You've submitted too many links recently. Please try again in an hour."),
@@ -380,7 +381,7 @@ class RandomStringManager(object):
 rand_strings = RandomStringManager()
 
 rand_strings.add('sadmessages',   "Funny 500 page message", 10)
-rand_strings.add('create_reddit', "Reason to create a reddit", 20)
+rand_strings.add('create_reddit', "Reason to create a reddit", 10)
 
 
 def print_rand_strings():

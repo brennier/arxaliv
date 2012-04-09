@@ -3,8 +3,10 @@
 # expects two environment variables
 # REDDIT_ROOT = path to the root of the reddit public code; the directory with the Makefile
 # REDDIT_CONFIG = path to the ini file to use
+REDDIT_ROOT=/home/ubuntu/reddit/r2
+REDDIT_CONFIG=/home/ubuntu/reddit/r2/run.ini
 
-USER=ri
+USER=reddit
 LINKDBHOST="$1"
 
 # e.g. 'year'
@@ -14,7 +16,7 @@ INTERVAL="$2"
 LISTINGS="$3"
 
 # e.g. 5432 for default pg or 6543 for pgbouncer
-DB_PORT=6543
+DB_PORT=5432
 
 FNAME=/scratch/top-thing-links.$INTERVAL.dump
 DNAME=/scratch/top-data-links.$INTERVAL.dump
@@ -32,7 +34,7 @@ trap "rm -f $FNAME $DNAME" SIGINT SIGTERM
 # make this exist immediately to act as a lock
 touch $FNAME
 
-psql -F"\t" -A -t -d newreddit -U $USER -h $LINKDBHOST -p $DB_PORT \
+psql -F"\t" -A -t -U $USER -h $LINKDBHOST -p $DB_PORT \
      -c "\\copy (select t.thing_id, 'thing', 'link',
                         t.ups, t.downs, t.deleted, t.spam, extract(epoch from t.date)
                    from reddit_thing_link t
@@ -40,7 +42,7 @@ psql -F"\t" -A -t -d newreddit -U $USER -h $LINKDBHOST -p $DB_PORT \
                      and t.date > now() - interval '1 $INTERVAL'
                   )
                   to '$FNAME'"
-psql -F"\t" -A -t -d newreddit -U $USER -h $LINKDBHOST -p $DB_PORT \
+psql -F"\t" -A -t -U $USER -h $LINKDBHOST -p $DB_PORT \
      -c "\\copy (select t.thing_id, 'data', 'link',
                         d.key, d.value
                    from reddit_data_link d, reddit_thing_link t

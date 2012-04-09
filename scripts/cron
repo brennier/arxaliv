@@ -1,0 +1,8 @@
+# m h  dom mon dow   command
+*/5   *   *   *   *    /home/ubuntu/reddit/scripts/rising.sh
+*/4   *   *   *   *    /home/ubuntu/reddit/scripts/send_mail.sh
+*/3   *   *   *   *    /home/ubuntu/reddit/scripts/broken_things.sh
+1     *   *   *   *    /home/ubuntu/reddit/scripts/update_promos.sh
+0    23   *   *   *    /home/ubuntu/reddit/scripts/update_reddits.sh
+30   23   *   *   *    /home/ubuntu/reddit/scripts/update_sr_names.sh
+0     1   *   *   *    /home/ubuntu/reddit/scripts/scrape_arxiv.sh

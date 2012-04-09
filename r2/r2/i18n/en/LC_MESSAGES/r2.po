@@ -58,11 +58,11 @@ msgstr "see? you don't really want to leave"
 
 #: r2/controllers/buttons.py:76
 msgid "reddit buttons"
-msgstr "reddit buttons"
+msgstr "arxaliv buttons"
 
 #: r2/controllers/buttons.py:82
 msgid "reddit widget"
-msgstr "reddit widget"
+msgstr "arxaliv widget"
 
 #: r2/controllers/buttons.py:88 r2/lib/menus.py:71
 msgid "bookmarklets"
@@ -80,7 +80,7 @@ msgstr "forbidden (%(domain)s)"
 
 #: r2/controllers/error.py:88
 msgid "this reddit has been banned."
-msgstr "this reddit has been banned."
+msgstr "this arxaliv has been banned."
 
 #: r2/controllers/error.py:96
 msgid "page not found"
@@ -176,7 +176,7 @@ msgstr "that link has already been submitted"
 
 #: r2/controllers/errors.py:32
 msgid "that subreddit already exists"
-msgstr "that subreddit already exists"
+msgstr "that subarxaliv already exists"
 
 #: r2/controllers/errors.py:33
 msgid "that name isn't going to work"
@@ -205,7 +205,7 @@ msgstr "description is too long"
 
 #: r2/controllers/feedback.py:10
 msgid "inquire about advertising on reddit"
-msgstr "inquire about advertising on reddit"
+msgstr "inquire about advertising on arxaliv"
 
 #: r2/controllers/feedback.py:17 r2/lib/menus.py:75
 msgid "advertise"
@@ -261,7 +261,7 @@ msgstr "profile for %(user)s"
 #: r2/controllers/front.py:235 r2/controllers/front.py:237
 #: r2/templates/createsubreddit.html:40
 msgid "create a reddit"
-msgstr "create a reddit"
+msgstr "create a arxaliv"
 
 #: r2/controllers/front.py:277 r2/lib/menus.py:63
 msgid "stats"
@@ -298,11 +298,11 @@ msgstr "messages"
 
 #: r2/controllers/listingcontroller.py:366 r2/templates/pagenamenav.html:9
 msgid "reddits"
-msgstr "reddits"
+msgstr "arxalivs"
 
 #: r2/controllers/listingcontroller.py:401
 msgid "reddits: "
-msgstr "reddits: "
+msgstr "arxalivs: "
 
 #: r2/controllers/post.py:81
 msgid "over 18?"
@@ -512,7 +512,7 @@ msgstr "create"
 
 #: r2/lib/menus.py:100
 msgid "my reddits"
-msgstr "my reddits"
+msgstr "my arxalivs"
 
 #: r2/lib/menus.py:102
 msgid "translate site"
@@ -672,23 +672,23 @@ msgstr "you've been banned"
 
 #: r2/lib/strings.py:65
 msgid "you have not subscribed to any reddits."
-msgstr "you have not subscribed to any reddits."
+msgstr "you have not subscribed to any arxalivs."
 
 #: r2/lib/strings.py:66
 msgid "below are the reddits you have subscribed to"
-msgstr "below are the reddits you have subscribed to"
+msgstr "below are the arxalivs you have subscribed to"
 
 #: r2/lib/strings.py:67
 msgid "below are the reddits that you have contributor access to."
-msgstr "below are the reddits that you have contributor access to."
+msgstr "below are the arxalivs that you have contributor access to."
 
 #: r2/lib/strings.py:68
 msgid "below are the reddits that you have moderator access to."
-msgstr "below are the reddits that you have moderator access to."
+msgstr "below are the arxalivs that you have moderator access to."
 
 #: r2/lib/strings.py:71
 msgid "click the checkbox next to a reddit to subscribe"
-msgstr "click the checkbox next to a reddit to subscribe"
+msgstr "click the checkbox next to a arxaliv to subscribe"
 
 #: r2/lib/strings.py:131 r2/lib/strings.py:136 r2/templates/frametoolbar.html:71
 #: r2/templates/link.html:114 r2/templates/link.htmllite:12
@@ -721,8 +721,8 @@ msgstr[1] "messages"
 #: r2/lib/strings.py:138 r2/templates/newlink.html:40
 msgid "subreddit"
 msgid_plural "subreddits"
-msgstr[0] "subreddit"
-msgstr[1] "subreddits"
+msgstr[0] "subarxaliv"
+msgstr[1] "subarxalivs"
 
 #: r2/lib/strings.py:141 r2/templates/subredditinfobar.html:34
 msgid "subscriber"
@@ -796,7 +796,7 @@ msgstr ""
 
 #: r2/lib/pages/pages.py:97
 msgid "Create your own reddit"
-msgstr "Create your own reddit"
+msgstr "Create your own arxaliv"
 
 #: r2/lib/pages/pages.py:312
 msgid "login or register"
@@ -804,16 +804,19 @@ msgstr "login or register"
 
 #: r2/lib/pages/pages.py:405 r2/templates/createsubreddit.html:34
 msgid "manage your reddit"
-msgstr "manage your reddit"
+msgstr "manage your arxaliv"
 
 #: r2/lib/pages/pages.py:406
 #, python-format
 msgid "about %(site)s"
 msgstr "about %(site)s"
 
+msgid "search reddit"
+msgstr "search arxaliv"
+
 #: r2/lib/pages/pages.py:430
 msgid "search reddits"
-msgstr "search reddits"
+msgstr "search arxalivs"
 
 #: r2/lib/pages/pages.py:538
 msgid "you aren't allowed to do that."
@@ -821,7 +824,7 @@ msgstr "you aren't allowed to do that."
 
 #: r2/lib/pages/pages.py:560
 msgid "Customize your reddit"
-msgstr "Customize your reddit"
+msgstr "Customize your arxaliv"
 
 #: r2/lib/pages/pages.py:561
 msgid "Select which communities you want to see"
@@ -829,7 +832,7 @@ msgstr "Select which communities you want to see"
 
 #: r2/lib/pages/pages.py:563
 msgid "Other reddit communities"
-msgstr "Other reddit communities"
+msgstr "Other arxaliv communities"
 
 #: r2/lib/pages/pages.py:630
 msgid "try entering those letters again"
@@ -875,7 +878,7 @@ msgstr "ago"
 
 #: r2/models/subreddit.py:333
 msgid "reddit.com: what's new online!"
-msgstr "reddit.com: what's new online!"
+msgstr "arxaliv.com: what's new online!"
 
 #: r2/templates/admintranslations.html:40
 msgid "disable"
@@ -1077,7 +1080,7 @@ msgstr "quoted text"
 
 #: r2/templates/createsubreddit.html:38
 msgid "that subreddit doesn't exist, but you can create it here."
-msgstr "that subreddit doesn't exist, but you can create it here."
+msgstr "that subarxaliv doesn't exist, but you can create it here."
 
 #: r2/templates/createsubreddit.html:51
 msgid "name"
@@ -1328,7 +1331,7 @@ msgstr "next"
 
 #: r2/templates/listing.html:29
 msgid "there doesn't seem to be anything here"
-msgstr "there doesn't seem to be anything here"
+msgstr "there doesn't seem to be anything here (maybe you need to subscribe to some categories by finding them in the top bar)"
 
 #: r2/templates/login.html:9
 msgid "you are logged in. go use the site!"
@@ -1448,11 +1451,11 @@ msgstr "enter a title, or click submit to find one automatically."
 #: r2/templates/newlink.html:82
 #, python-format
 msgid "use reddit from your toolbar with the %(bookmarklets)s"
-msgstr "use reddit from your toolbar with the %(bookmarklets)s"
+msgstr "use arxaliv from your toolbar with the %(bookmarklets)s"
 
 #: r2/templates/newlink.html:83
 msgid "reddit bookmarklets"
-msgstr "reddit bookmarklets"
+msgstr "arxaliv bookmarklets"
 
 #: r2/templates/organiclisting.html:23
 msgid ""
@@ -1462,7 +1465,7 @@ msgstr ""
 
 #: r2/templates/over18.html:3
 msgid "you must be at least eighteen to view this reddit"
-msgstr "you must be at least eighteen to view this reddit"
+msgstr "you must be at least eighteen to view this arxaliv"
 
 #: r2/templates/over18.html:10
 msgid "are you over eighteen and willing to see adult content?"
@@ -1494,7 +1497,7 @@ msgstr "see the above comments"
 
 #: r2/templates/prefdelete.html:15
 msgid "delete your reddit account? hope you have a good reason."
-msgstr "delete your reddit account? hope you have a good reason."
+msgstr "delete your arxaliv account? hope you have a good reason."
 
 #: r2/templates/prefdelete.html:18
 msgid "deleting..."
@@ -1526,7 +1529,7 @@ msgstr "clicking options"
 
 #: r2/templates/prefoptions.html:54
 msgid "display links with a reddit toolbar"
-msgstr "display links with a reddit toolbar"
+msgstr "display links with a arxaliv toolbar"
 
 #: r2/templates/prefoptions.html:56
 msgid "open links in a new window"
@@ -1620,7 +1623,7 @@ msgstr ""
 
 #: r2/templates/prefoptions.html:116
 msgid "required to view some reddits"
-msgstr "required to view some reddits"
+msgstr "required to view some arxalivs"
 
 #: r2/templates/prefoptions.html:122
 msgid "save options"
@@ -1765,7 +1768,7 @@ msgstr "a community for %(time)s"
 #: r2/templates/subredditinfobar.html:43
 #, python-format
 msgid "you are a %(contributor)s of this reddit."
-msgstr "you are a %(contributor)s of this reddit."
+msgstr "you are a %(contributor)s of this arxaliv."
 
 #: r2/templates/subredditinfobar.html:44
 msgid "stop being a contributor?"
@@ -1778,7 +1781,7 @@ msgstr "you are no longer a contributor"
 #: r2/templates/subredditinfobar.html:50
 #, python-format
 msgid "you are a %(moderator)s of this reddit."
-msgstr "you are a %(moderator)s of this reddit."
+msgstr "you are a %(moderator)s of this arxaliv."
 
 #: r2/templates/subredditinfobar.html:51
 msgid "stop being a moderator?"
@@ -1933,39 +1936,39 @@ msgstr "...for your favorite subject."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 2"
-msgstr "...for your favorite sorority."
+msgstr "...for your research group."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 3"
-msgstr "...for your favorite team."
+msgstr "...for open access."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 4"
-msgstr "...because you love freedom."
+msgstr "...to share your insights."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 5"
-msgstr "...because you hate freedom."
+msgstr "...to share your ideas."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 6"
-msgstr "...for a fringe political candidate."
+msgstr "...to work together."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 7"
-msgstr "...for your favorite hobby."
+msgstr "...to record all progress on your problem."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 8"
-msgstr "...for your favorite programming language."
+msgstr "...to keep track of your papers."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 9"
-msgstr "...for your WoW guild."
+msgstr "...to note the papers that you approve."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 10"
-msgstr "...for your Quake 2 clan."
+msgstr "...for the journal you always wanted to edit."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 11"
@@ -1993,11 +1996,11 @@ msgstr "...because 4chan is getting overcrowded."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 17"
-msgstr "...because nothing in life is free (except reddits!)"
+msgstr "...because nothing in life is free (except arxalivs!)"
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 18"
-msgstr "...sudo create your own reddit."
+msgstr "...sudo create your own arxaliv."
 
 #: randomstring:create_reddit
 msgid "Reason to create a reddit 19"

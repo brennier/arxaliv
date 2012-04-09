@@ -55,6 +55,18 @@ def make_map(global_conf={}, app_conf={}):
     mc('/about/:location', controller='front', 
        action='editreddit', location = 'about')
 
+    mc('/arxalivs/create', controller='front', action='newreddit')
+    mc('/arxalivs/search', controller='front', action='search_reddits')
+    mc('/arxalivs/login', controller='forms', action='login')
+    mc('/arxalivs/:where', controller='reddits', action='listing',
+       where = 'popular',
+       requirements=dict(where="popular|new|banned"))
+
+    mc('/arxalivs/mine/:where', controller='myreddits', action='listing',
+       where='subscriber',
+       requirements=dict(where='subscriber|contributor|moderator|all|others'))
+
+
     mc('/reddits/create', controller='front', action='newreddit')
     mc('/reddits/search', controller='front', action='search_reddits')
     mc('/reddits/login', controller='forms', action='login')
@@ -64,7 +76,7 @@ def make_map(global_conf={}, app_conf={}):
 
     mc('/reddits/mine/:where', controller='myreddits', action='listing',
        where='subscriber',
-       requirements=dict(where='subscriber|contributor|moderator'))
+       requirements=dict(where='subscriber|contributor|moderator|all|others'))
 
     mc('/buttons', controller='buttons', action='button_demo_page')
     mc('/upgradebuttons', controller='buttons', action='upgrade_buttons')
@@ -154,7 +166,9 @@ def make_map(global_conf={}, app_conf={}):
 
     mc('/health', controller='health', action='health')
 
-    mc('/', controller='hot', action='listing')
+    #mc('/', controller='hot', action='listing')
+    mc('/hot/', controller='hot', action='listing')
+    mc('/', controller='browse', sort='top', t='all', time='all', action='listing', requirements=dict(sort='top', t='all', time='all'))
 
     listing_controllers = "hot|saved|new|randomrising|comments"
 
