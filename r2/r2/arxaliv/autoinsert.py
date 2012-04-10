@@ -92,8 +92,8 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     l._date = datetime(date.year,date.month,date.day,tzinfo=g.tz)
     l.selftext = description
     l._commit()
-    for cross_sr in cross_srs:
-      LinkSR(l, subreddit_or_create(cross_sr, a), 'crosspost')._commit()
+    #for cross_sr in cross_srs:
+    #  LinkSR(l, subreddit_or_create(cross_sr, a), 'crosspost')._commit()
     l.set_url_cache()
     queries.queue_vote(user, l, True, '127.0.0.1')
     queries.new_savehide(l._save(user))
@@ -148,7 +148,7 @@ arXivRaw_reader = MetadataReader(
 
 def run():
     time2 = datetime.now(tz=None)
-    time = time2 - timedelta(days=7)
+    time = time2 - timedelta(days=2)
     insertAll(time, None)
 
 def insertAll(time, time2):

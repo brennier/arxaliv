@@ -6,3 +6,17 @@
 0    23   *   *   *    /home/ubuntu/reddit/scripts/update_reddits.sh
 30   23   *   *   *    /home/ubuntu/reddit/scripts/update_sr_names.sh
 0     1   *   *   *    /home/ubuntu/reddit/scripts/scrape_arxiv.sh
+0    */2 *   *   *   /home/ubuntu/reddit/scripts/gen_time_listings.sh localhost year '("month","year")'
+*/20  *   *   *   *   /home/ubuntu/reddit/scripts/gen_time_listings.sh localhost week '("day","week")'
+*/5    *   *   *   *   /home/ubuntu/reddit/scripts/gen_time_listings.sh localhost hour '("hour",)' 
+*/20   *   *   *   *   /home/ubuntu/reddit/scripts/solrchanged.sh drain=True
+#*/5         1-23 *  * *  ~/bin/solrchanged.sh commit=True
+#0           0    *  * *  ~/bin/solrchanged.sh commit=True,optimize=True
+#5-55/5      0    *  * *  ~/bin/solrchanged.sh commit=True
+#1-4         1-23 *  * *  ~/bin/solrchanged.sh commit=False
+#6-9,11-14   *    *  * *  ~/bin/solrchanged.sh commit=False
+#16-19,21-24 *    *  * *  ~/bin/solrchanged.sh commit=False
+#26-29,31-34 *    *  * *  ~/bin/solrchanged.sh commit=False
+#36-39,41-44 *    *  * *  ~/bin/solrchanged.sh commit=False
+#46-49,51-54 *    *  * *  ~/bin/solrchanged.sh commit=False
+#55-59       *    *  * *  ~/bin/solrchanged.sh commit=False

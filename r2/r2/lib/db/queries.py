@@ -1077,6 +1077,7 @@ def add_all_srs():
        very slow."""
     q = Subreddit._query(sort = asc('_date'))
     for sr in fetch_things2(q):
+        print sr.name
         for q in all_queries(get_links, sr, ('hot', 'new'), ['all']):
             q.update()
         for q in all_queries(get_links, sr, time_filtered_sorts, db_times.keys()):
