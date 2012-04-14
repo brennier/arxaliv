@@ -131,7 +131,7 @@ menu =   MenuHandler(hot          = _('hot'),
                      contributors = _("edit approved submitters"),
                      banned       = _("ban users"),
                      banusers     = _("ban users"),
-                     flair        = _("edit user flair"),
+                     flair        = _("edit flair"),
                      log          = _("moderation log"),
                      modqueue     = _("moderation queue"),
                      trials       = _("view and judge submitted links"),
@@ -344,10 +344,14 @@ class RssButton(NavButton):
 
 
 class SubredditButton(NavButton):
+    from r2.models.subreddit import Frontpage, Mod
+    # TRANSLATORS: these refer to /r/mod and the front page.
+    name_overrides = {Mod: _("mod"),
+                      Frontpage: _("front")}
+
     def __init__(self, sr):
-        from r2.models.subreddit import Mod
         self.path = sr.path
-        name = 'mod' if sr == Mod else sr.name
+        name = self.name_overrides.get(sr, sr.name)
         NavButton.__init__(self, name, sr.path, False,
                            isselected = (c.site == sr))
 
@@ -383,11 +387,15 @@ class NamedButton(NavButton):
 class JsButton(NavButton):
     """A button which fires a JS event and thus has no path and cannot
     be in the 'selected' state"""
-    def __init__(self, title, style = 'js', **kw):
-        NavButton.__init__(self, title, '#', style = style, **kw)
+    def __init__(self, title, style = 'js', tab_name = None, **kw):
+        NavButton.__init__(self, title, '#', style = style, tab_name = tab_name,
+                           **kw)
 
     def build(self, *a, **kw):
-        self.path = 'javascript:void(0)'
+        if self.tab_name:
+            self.path = '#' + self.tab_name
+        else:
+            self.path = 'javascript:void(0)'
 
     def is_selected(self):
         return False

@@ -75,6 +75,7 @@ class Subreddit(Thing, Printable):
                      link_type = 'any', # one of ('link', 'self', 'any')
                      flair_enabled = True,
                      flair_position = 'right', # one of ('left', 'right')
+                     link_flair_position = '', # one of ('', 'left', 'right')
                      flair_self_assign_enabled = False,
                      )
     _essentials = ('type', 'name', 'lang')
@@ -660,6 +661,7 @@ class FakeSubreddit(Subreddit):
     def __init__(self):
         Subreddit.__init__(self)
         self.title = ''
+        self.link_flair_position = 'left'
 
     def is_moderator(self, user):
         return c.user_is_loggedin and c.user_is_admin
@@ -991,6 +993,7 @@ class DomainSR(FakeSubreddit):
         # switched over to use the non-_old variety.
         return queries.get_domain_links(self.domain, sort, time)
 
+Frontpage = DefaultSR()
 Sub = SubSR()
 Friends = FriendsSR()
 Mod = ModSR()
