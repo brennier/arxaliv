@@ -52,7 +52,7 @@ class Subreddit(Thing, Printable):
                      stylesheet_rtl = None,
                      stylesheet_contents = '',
                      stylesheet_hash     = '0',
-                     firsttext = strings.firsttext,
+                     firsttext = g.announcement_message, #strings.firsttext,
                      header = None,
                      header_size = None,
                      header_title = "",

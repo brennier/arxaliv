@@ -59,7 +59,7 @@ class Account(Thing):
                      pref_clickgadget = 5,
                      pref_public_votes = False,
                      pref_hide_from_robots = False,
-                     pref_research = False,
+                     pref_research = True,
                      pref_hide_ups = False,
                      pref_hide_downs = False,
                      pref_min_link_score = -4,

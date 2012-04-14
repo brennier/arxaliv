@@ -30,7 +30,7 @@ import random as rand
 # The regular hardcache reaper should never run on one of these,
 # since a mistrial should be declared if the trial is still open
 # after 24 hours. So the "3 days" expiration isn't really real.
-TRIAL_TIME = 3 * 86400
+TRIAL_TIME = 300 * 86400
 
 def trial_key(thing):
     return "trial-" + thing._fullname

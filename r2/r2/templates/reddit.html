@@ -96,6 +96,8 @@
        rss= add_sr(join_urls(request.path,'.rss'))
        if thing.extension_handling == "private":
           rss = make_feedurl(c.user, rss)
+       if thing.query_ext:
+          rss = rss + thing.query_ext
      %>
     <link rel="alternate" type="application/rss+xml" title="RSS"
           href="${rss}" />

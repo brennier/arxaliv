@@ -22,11 +22,28 @@
 
 <%!
    from r2.lib.template_helpers import static, s3_https_if_secure, add_sr
-   from r2.models import Sub, FakeSubreddit
+   from r2.lib.template_helpers import join_urls, class_dict, get_domain
+   from r2.models import Sub, FakeSubreddit, make_feedurl
    from r2.models.subreddit import DefaultSR
    from r2.lib.pages import SearchForm
 %>
 <%namespace file="utils.html" import="plain_link, img_link, text_with_links, separator, logout"/>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_GB/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+<script type="text/javascript">
+  (function() {
+    var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+    po.src = 'https://apis.google.com/js/plusone.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+  })();
+</script>
 
 <div id="header">
   <a tabindex="1" href="#content" id="jumpToContent">${_('jump to content')}</a>
@@ -58,9 +75,25 @@
     %for toolbar in thing.toolbars:
       ${toolbar}
     %endfor
-  </div>
+      %if thing.extension_handling:
+      <%
+       rss= add_sr(join_urls(request.path,'.rss'))
+       if thing.extension_handling == "private":
+          rss = make_feedurl(c.user, rss)
+       if thing.query_ext:
+          rss = rss + thing.query_ext
+      %>
+      <a href="${rss}" style="margin-left:10px;font-weight:bold;color:#940"><img src="http://s3.amazonaws.com/arxaliv/feed-icon-14x14.png" style="margin-bottom:-2px;margin-right:2px" width="14" height="14"/>RSS Feed</a>
+      %endif
 
+<span style="width:48px;padding-top:8px;padding-right:10px;padding-left:30px"><g:plusone size="" annotation="none"></g:plusone></span>
+		    <span style="width:150px;padding-top:10px;padding-right:0px">
+		    <div style="display:inline" class="fb-like" data-send="true" data-layout="button_count" data-width="30" data-show-faces="false"></div></span>
+
+  </div>
   <div id="header-bottom-${'left' if c.lang_rtl else 'right'}">
+
+
     %if not c.user_is_loggedin:
       %if thing.enable_login_cover and not g.read_only_mode:
       <span class="user">

@@ -151,6 +151,7 @@ def maps_from_things(things, boost_only = False):
 
         sr_ids = [thing.sr_id for thing in things
                   if hasattr(thing, 'sr_id')]
+        sr_ids += sum([thing.multi_sr_id for thing in things if hasattr(thing, 'multi_sr_id')],[])
         srs = Subreddit._byID(sr_ids, data=True, return_dict=True)
 
     for thing in things:
@@ -171,11 +172,11 @@ def maps_from_things(things, boost_only = False):
 
                 d.update(dict(fullname = thing._fullname,
                               subreddit = sr.name,
-                              reddit = sr.name,
+                              arxaliv = ' '.join([srs[sr2].name for sr2 in thing.multi_sr_id]),
                               text = ' '.join([thing.title, a.name, sr.name]),
                               author = a.name,
                               timestamp = thing._date.strftime("%s"),
-                              sr_id = str(thing.sr_id),
+                              sr_id = ' '.join([str(sr1) for sr1 in thing.multi_sr_id]),
                               over18 = yesno(sr.over_18),
                               is_self = yesno(thing.is_self),
                               ))
@@ -188,7 +189,7 @@ def maps_from_things(things, boost_only = False):
                     d['site'] = ' '.join(UrlParser(thing.url).domain_permutations())
             maps.append(d)
         except AttributeError:
-            pass
+            print 'Oops'
     return maps
 
 def to_variables(ups, downs, num_comments):

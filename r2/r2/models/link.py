@@ -204,6 +204,9 @@ class Link(Thing, Printable):
                                (user and self.author_id != user._id)):
                 return False
 
+            if getattr(self, "verdict", "") == "":
+                return False
+
             #author_karma = wrapped.author.link_karma
             #if author_karma <= 0 and random.randint(author_karma, 0) != 0:
                 #return False

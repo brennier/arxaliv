@@ -46,6 +46,7 @@ menu_selected=StringHandler(hot          = _("what's hot"),
                             new          = _("what's new"),
                             top          = _("top scoring"),
                             controversial= _("most controversial"),
+                            rss= _("rss feed"),
                             saved        = _("saved"),
                             recommended  = _("recommended"),
                             promote      = _('promote'),
@@ -61,6 +62,7 @@ menu =   MenuHandler(hot          = _('hot'),
                      more         = _('more'),
                      relevance    = _('relevance'),
                      controversial  = _('controversial'),
+		     rss= _("rss feed"),
                      confidence   = _('best'),
                      saved        = _('saved {toolbar}'),
                      recommended  = _('recommended'),
@@ -132,6 +134,7 @@ menu =   MenuHandler(hot          = _('hot'),
                      flair        = _("edit user flair"),
                      log          = _("moderation log"),
                      modqueue     = _("moderation queue"),
+                     trials       = _("view and judge submitted links"),
 
                      popular      = _("popular"),
                      create       = _("create"),
@@ -321,6 +324,24 @@ class OffsiteButton(NavButton):
 
     def cachable_attrs(self):
         return [('path', self.path), ('title', self.title)]
+
+class RssButton(NavButton):
+    def __init__(self, sr):
+        self.path = sr.path + 'foo'
+        name = sr.name
+        NavButton.__init__(self, name, sr.path, False,
+                           isselected = (c.site == sr))
+
+    def build(self, base_path = ''):
+        pass
+
+    def is_selected(self):
+        return self.isselected
+
+    def cachable_attrs(self):
+        return [('path', self.path), ('title', self.title),
+                ('isselected', self.isselected)]
+
 
 class SubredditButton(NavButton):
     def __init__(self, sr):

@@ -128,6 +128,8 @@ class Reddit(Templated):
     css_class          = None
     additional_css     = None
     extra_page_classes = None
+    query_ext          = None
+    query_raw          = None
 
     def __init__(self, space_compress = True, nav_menus = None, loginbox = True,
                  infotext = '', content = None, short_description='', title = '', robots = None, 
@@ -168,10 +170,12 @@ class Reddit(Templated):
             elif (c.firsttime == 'mobile_suggest' and
                   c.render_style != 'compact'):
                 infotext = strings.iphone_first
+            elif c.firsttime and g.announcement_message:
+                infotext = g.announcement_message
+            elif c.site.firsttext:
+                infotext = c.site.firsttext
             elif g.announcement_message:
                 infotext = g.announcement_message
-            elif c.firsttime and c.site.firsttext:
-                infotext = c.site.firsttext
 
         if infotext:
             self.infobar = InfoBar(message = infotext)
@@ -188,7 +192,9 @@ class Reddit(Templated):
         self.toolbars = self.build_toolbars()
 
     def sr_admin_menu(self):
-        buttons = [NavButton(menu.community_settings, css_class = 'reddit-edit',
+        buttons = [
+                   #NamedButton('trials', css_class = 'reddit-trials'),
+                   NavButton(menu.community_settings, css_class = 'reddit-edit',
                              dest = "edit"),
                    NamedButton('modmail', dest = "message/inbox",
                                css_class = 'moderator-mail'),
@@ -266,6 +272,19 @@ class Reddit(Templated):
                 else:
                     kwargs["subtitles"] = [strings.submit_box_restricted_text]
             ps.append(SideBox(**kwargs))
+
+        if not isinstance(c.site, FakeSubreddit) and not c.cname:
+            if (c.user_is_loggedin and
+                (c.site.is_moderator(c.user) or c.user_is_admin)):
+                kwargs = {
+                    "title": _("Review submissions"),
+                    "css_class": "submit",
+                    "show_cover": True
+                }
+                kwargs["link"] = "/about/trials"
+                kwargs["sr_path"] = isinstance(c.site, DefaultSR) or not isinstance(c.site, FakeSubreddit),
+                kwargs["subtitles"] = []
+                ps.append(SideBox(**kwargs))
 
         if self.create_reddit_box and c.user_is_loggedin:
             delta = datetime.datetime.now(g.tz) - c.user._date
@@ -355,7 +374,8 @@ class Reddit(Templated):
                             NamedButton('top', dest='/'),
                             NamedButton('hot', aliases=['/hot']),
                             NamedButton('new'), 
-                            NamedButton('controversial'),
+                            #NamedButton('controversial'),
+                            #NamedButton('rss feed', dest='.rss')
                             ]
 
             if c.user_is_loggedin or not g.read_only_mode:
@@ -791,6 +811,7 @@ class SearchPage(BoringPage):
     """Search results page"""
     searchbox = False
     extra_page_classes = ['search-page']
+    extension_handling= True
 
     def __init__(self, pagename, prev_search, elapsed_time,
                  num_results, search_params = {},
@@ -802,7 +823,13 @@ class SearchPage(BoringPage):
                                    search_params = search_params,
                                    show_feedback = True, site=site,
                                    simple=simple, restrict_sr=restrict_sr)
+        kw['short_description'] = prev_search
         BoringPage.__init__(self, pagename, robots='noindex', *a, **kw)
+        options = dict(q = prev_search, sort='new')
+        if restrict_sr:
+            options['restrict_sr'] = 'on'
+        self.query_ext = query_string(options)
+        self.query_raw = prev_search
 
     def content(self):
         return self.content_stack((self.searchbar, self.infobar,
@@ -1272,14 +1299,14 @@ class ProfileBar(Templated):
                                         precision=60 * 60 * 24 * 30) # months
                 if hasattr(user, "gold_subscr_id"):
                     self.gold_subscr_id = user.gold_subscr_id
-            if user._id != c.user._id:
+            if user._id != c.user._id and False:
                 self.goldlink = "/gold?goldtype=gift&recipient=" + user.name
                 self.giftmsg = _("buy %(user)s a month of reddit gold" %
                                  dict(user=user.name))
-            elif running_out_of_gold:
+            elif running_out_of_gold and False:
                 self.goldlink = "/gold"
                 self.giftmsg = _("renew your reddit gold")
-            elif not c.user.gold:
+            elif not c.user.gold and False:
                 self.goldlink = "/gold"
                 self.giftmsg = _("treat yourself to reddit gold")
 
@@ -1460,7 +1487,7 @@ class SubscriptionBox(Templated):
         else:
             subscription_multi_path = None
 
-        if len(srs) > Subreddit.sr_limit and c.user_is_loggedin:
+        if len(srs) > Subreddit.sr_limit and c.user_is_loggedin and False:
             if not c.user.gold:
                 self.goldlink = "/gold"
                 self.goldmsg = _("raise it to %s") % Subreddit.gold_limit

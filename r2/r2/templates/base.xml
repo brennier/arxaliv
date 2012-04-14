@@ -28,7 +28,7 @@
      xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>${self.Title()}</title>        
-    <link>${add_sr("/", force_hostname = True)}</link>
+    <link>${add_sr("/", force_hostname = True)}${thing.query_ext or ''}</link>
     <description>${c.site.description or ''}</description>
     <image>
       <%
@@ -41,13 +41,19 @@
       %>
       <url>${header_img}</url>
       <title>${self.Title()}</title>
-      <link>${add_sr("/", force_hostname = True)}</link>
+      <link>${add_sr("/", force_hostname = True)}${thing.query_ext or ''}</link>
     </image>
     ${next.body()}
   </channel>
 </rss>  
 
 <%def name="Title()">
-${c.site.title}
+<%
+  if thing.query_raw:
+    title_txt = 'Arxaliv: ' + thing.query_raw
+  else:
+    title_txt = c.site.title
+%>
+${title_txt}
 </%def>
 

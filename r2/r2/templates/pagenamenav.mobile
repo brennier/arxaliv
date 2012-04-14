@@ -22,7 +22,7 @@
 
 <%def name="subreddit()">
   <span class="hover pagename redditname">
-    <a href="${c.site.path}">${c.site.name}</a>
+    <a href="${c.site.path}">${c.site.title}</a>
   </span>
 </%def>
 
