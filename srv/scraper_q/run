@@ -8,4 +8,4 @@
 export HOME=/home/reddit
 cd $HOME/reddit/r2
 exec 2>&1
-exec setuidgid reddit /usr/local/bin/paster run run.ini r2/lib/media.py -c "run()"
+exec setuidgid reddit /usr/local/bin/paster run run-1slot.ini r2/lib/media.py -c "run()"

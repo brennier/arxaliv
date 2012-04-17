@@ -635,6 +635,7 @@ def add_queries(queries, insert_items=None, delete_items=None, foreground=False)
         return
 
     for q in queries:
+        #print q
         if insert_items and q.can_insert():
             log.debug("Inserting %s into query %s" % (insert_items, q))
             if foreground:
@@ -1275,6 +1276,9 @@ def process_votes_single(qname, limit=0):
         r = pickle.loads(msg.body)
 
         uid, tid, dir, ip, organic, cheater = r
+        #if uid==3:
+        #  print 'Skipping ' + str(tid)
+        #  return
         voter = Account._byID(uid, data=True)
         votee = Thing._by_fullname(tid, data = True)
         if isinstance(votee, Comment):
@@ -1300,6 +1304,9 @@ def process_votes_multi(qname, limit=100):
             r = pickle.loads(msg.body)
 
             uid, tid, dir, ip, organic, cheater = r
+            if uid==3:
+                print 'Skipping ' + str(tid)
+                return
             voter = Account._byID(uid, data=True)
             votee = Thing._by_fullname(tid, data = True)
             if isinstance(votee, Comment):

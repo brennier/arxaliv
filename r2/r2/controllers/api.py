@@ -1114,7 +1114,7 @@ class ApiController(RedditController):
         j._date = c.start_time
         j._commit()
 
-    @noresponse(VUser(),
+    @textresponse(VUser(),
                 VModhash(),
                 vote_type = VVotehash(('vh', 'id')),
                 ip = ValidIP(),
@@ -1127,11 +1127,12 @@ class ApiController(RedditController):
         store = True
 
         if not thing or thing._deleted:
-            return
+            return ''
 
         if vote_type == "rejected":
             reject_vote(thing)
             store = False
+            return 'vote rejected'
 
         thing_age = c.start_time - thing._date
         if thing_age.days > g.VOTE_AGE_LIMIT:
@@ -1140,6 +1141,10 @@ class ApiController(RedditController):
 
         if getattr(c.user, "suspicious", False):
             g.log.info("%s cast a %d vote on %s", c.user.name, dir, thing._fullname)
+
+        if dir<0 and isinstance(thing,Link):
+            if Link._commenteded(c.user, thing).values()[0] == None:
+                return 'To promote healthy and open discourse, you must first comment on an article before you can vote on it'
 
         dir = (True if dir > 0
                else False if dir < 0

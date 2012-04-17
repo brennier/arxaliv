@@ -293,7 +293,18 @@ $.fn.vote = function(vh, callback, event, ui_only) {
                 var thing_id = things.filter(":first").thing_id();
                 /* IE6 hack */
                 vh += event ? "" : ("-" + thing_id); 
-                $.request("vote", {id: thing_id, dir : dir, vh : vh});
+                //$.request("vote", {id: thing_id, dir : dir, vh : vh}, function(val) { if(val) { alert(val); entry.addClass('unvoted').removeClass('likes dislikes') } } );
+                $.request("vote", {id: thing_id, dir : dir, vh : vh}, function(val) {
+		     if(val) {
+			alert(val);
+			arrows.filter(".upmod").removeClass("upmod").addClass("up");
+			arrows.filter(".downmod").removeClass("downmod").addClass("down");
+			things.each(function() {
+				var entry=$(this).find(".entry:first, .midcol:first");
+				entry.addClass('unvoted').removeClass('likes dislikes')
+		        });
+	             }
+		},null,null,null,function(x) { alert('!!'+x); } );
             }
         }
         /* execute any callbacks passed in.  */

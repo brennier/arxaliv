@@ -4,7 +4,7 @@
 # REDDIT_ROOT = path to the root of the reddit public code; the directory with the Makefile
 # REDDIT_CONFIG = path to the ini file to use
 REDDIT_ROOT=/home/ubuntu/reddit/r2
-REDDIT_CONFIG=/home/ubuntu/reddit/r2/run.ini
+REDDIT_CONFIG=/home/ubuntu/reddit/r2/run-1slot.ini
 
 USER=reddit
 LINKDBHOST="$1"
@@ -33,8 +33,9 @@ trap "rm -f $FNAME $DNAME" SIGINT SIGTERM
 
 # make this exist immediately to act as a lock
 touch $FNAME
+chmod 777 $FNAME
 
-psql -F"\t" -A -t -U $USER -h $LINKDBHOST -p $DB_PORT \
+sudo -u reddit psql -F"\t" -A -t \
      -c "\\copy (select t.thing_id, 'thing', 'link',
                         t.ups, t.downs, t.deleted, t.spam, extract(epoch from t.date)
                    from reddit_thing_link t
@@ -42,7 +43,7 @@ psql -F"\t" -A -t -U $USER -h $LINKDBHOST -p $DB_PORT \
                      and t.date > now() - interval '1 $INTERVAL'
                   )
                   to '$FNAME'"
-psql -F"\t" -A -t -U $USER -h $LINKDBHOST -p $DB_PORT \
+sudo -u reddit psql -F"\t" -A -t \
      -c "\\copy (select t.thing_id, 'data', 'link',
                         d.key, d.value
                    from reddit_data_link d, reddit_thing_link t

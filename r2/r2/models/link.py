@@ -181,6 +181,13 @@ class Link(Thing, Printable):
         return self._something(Click, user, self._clicked, 'click')
 
     @classmethod
+    def _commenteded(cls, user, link):
+        return cls._somethinged(Commented, user, link, 'comment')
+
+    def _commented(self, user):
+        return self._something(Commented, user, self._commenteded, 'comment')
+
+    @classmethod
     def _hidden(cls, user, link):
         return cls._somethinged(SaveHide, user, link, 'hide')
 
@@ -647,6 +654,7 @@ class Comment(Thing, Printable):
             name = 'selfreply'
 
         c._commit()
+        link._commented(author)
 
         changed(link, True)  # link's number of comments changed
 
@@ -1217,6 +1225,7 @@ class Message(Thing, Printable):
 
 class SaveHide(Relation(Account, Link)): pass
 class Click(Relation(Account, Link)): pass
+class Commented(Relation(Account, Link)): pass
 
 class SimpleRelation(tdb_cassandra.Relation):
     _use_db = False

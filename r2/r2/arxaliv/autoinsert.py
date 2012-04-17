@@ -148,7 +148,7 @@ arXivRaw_reader = MetadataReader(
 
 def run():
     time2 = datetime.now(tz=None)
-    time = time2 - timedelta(days=2)
+    time = time2 - timedelta(days=7)
     insertAll(time, None)
 
 def insertAll(time, time2):
