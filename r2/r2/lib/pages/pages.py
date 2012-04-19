@@ -429,6 +429,8 @@ class Reddit(Templated):
                     classes.add('subscriber')
                 if c.site.is_moderator(c.user):
                     classes.add('moderator')
+                if c.site.is_contributor(c.user):
+                    classes.add('contributor')
                 if c.cname:
                     classes.add('cname')
         if isinstance(c.site, MultiReddit):
@@ -1004,7 +1006,8 @@ class CommentPane(Templated):
         return "_".join(map(str, ["commentpane", self.article._fullname,
                                   num, self.sort, self.num, c.lang,
                                   self.can_reply, c.render_style,
-                                  c.user.pref_show_flair]))
+                                  c.user.pref_show_flair,
+                                  c.user.pref_show_link_flair]))
 
     def __init__(self, article, sort, comment, context, num, **kw):
         # keys: lang, num, can_reply, render_style
@@ -1057,8 +1060,9 @@ class CommentPane(Templated):
                 logged_in = c.user_is_loggedin
                 try:
                     c.user = UnloggedUser([c.lang])
-                    # Preserve the viewing user's flair preference.
+                    # Preserve the viewing user's flair preferences.
                     c.user.pref_show_flair = user.pref_show_flair
+                    c.user.pref_show_link_flair = user.pref_show_link_flair
                     c.user_is_loggedin = False
 
                     # render as if not logged in (but possibly with reply buttons)
@@ -1847,8 +1851,8 @@ class FrameToolbar(Wrapped):
 
 class NewLink(Templated):
     """Render the link submission form"""
-    def __init__(self, captcha = None, url = '', title= '', subreddits = (),
-                 then = 'comments', resubmit=False):
+    def __init__(self, captcha = None, url = '', title= '', text = '', selftext = '',
+                 subreddits = (), then = 'comments', resubmit=False):
 
         self.show_link = self.show_self = False
 
@@ -1863,7 +1867,12 @@ class NewLink(Templated):
         if self.show_self and self.show_link:
             all_fields = set(chain(*(parts for (tab, parts) in tabs)))
             buttons = []
-            self.default_tab = tabs[0][0]
+            
+            if selftext == 'true' or text != '':
+                self.default_tab = tabs[1][0]
+            else:
+                self.default_tab = tabs[0][0]
+
             for tab_name, parts in tabs:
                 to_show = ','.join('#' + p for p in parts)
                 to_hide = ','.join('#' + p for p in all_fields if p not in parts)
@@ -1886,7 +1895,7 @@ class NewLink(Templated):
             self.default_sr = c.site
 
         Templated.__init__(self, captcha = captcha, url = url,
-                         title = title, subreddits = subreddits,
+                         title = title, text = text, subreddits = subreddits,
                          then = then)
 
 class ShareLink(CachedTemplate):
@@ -2544,7 +2553,9 @@ class FlairPane(Templated):
             flair_enabled=c.site.flair_enabled,
             flair_position=c.site.flair_position,
             link_flair_position=c.site.link_flair_position,
-            flair_self_assign_enabled=c.site.flair_self_assign_enabled)
+            flair_self_assign_enabled=c.site.flair_self_assign_enabled,
+            link_flair_self_assign_enabled=
+                c.site.link_flair_self_assign_enabled)
 
 class FlairList(Templated):
     """List of users who are tagged with flair within a subreddit."""
@@ -2690,14 +2701,16 @@ class FlairPrefs(CachedTemplate):
 class FlairSelectorLinkSample(CachedTemplate):
     def __init__(self, link, site, flair_template):
         flair_position = getattr(site, 'link_flair_position', 'right')
-        CachedTemplate.__init__(self,
-                                title=link.title,
-                                flair_position=flair_position,
-                                flair_template_id=flair_template._id,
-                                flair_text=flair_template.text,
-                                flair_css_class=flair_template.css_class,
-                                flair_text_editable=False,
-                               )
+        admin = bool(c.user_is_admin or site.is_moderator(c.user))
+        CachedTemplate.__init__(
+            self,
+            title=link.title,
+            flair_position=flair_position,
+            flair_template_id=flair_template._id,
+            flair_text=flair_template.text,
+            flair_css_class=flair_template.css_class,
+            flair_text_editable=admin or flair_template.text_editable,
+            )
 
 class FlairSelector(CachedTemplate):
     """Provide user with flair options according to subreddit settings."""
@@ -2717,6 +2730,9 @@ class FlairSelector(CachedTemplate):
             target_wrapper = (
                 lambda flair_template: FlairSelectorLinkSample(
                     link, site, flair_template))
+            self_assign_enabled = (
+                c.user._id == link.author_id
+                and site.link_flair_self_assign_enabled)
         else:
             flair_type = USER_FLAIR
             target = user
@@ -2728,14 +2744,17 @@ class FlairSelector(CachedTemplate):
                     user, subreddit=site, force_show_flair=True,
                     flair_template=flair_template,
                     flair_text_editable=admin or template.text_editable))
+            self_assign_enabled = site.flair_self_assign_enabled
 
         text = getattr(target, attr_pattern % 'text', '')
         css_class = getattr(target, attr_pattern % 'css_class', '')
         templates, matching_template = self._get_templates(
                 site, flair_type, text, css_class)
 
-        if site.flair_self_assign_enabled or admin:
+        if self_assign_enabled or admin:
             choices = [target_wrapper(template) for template in templates]
+        else:
+            choices = []
 
         # If one of the templates is already selected, modify its text to match
         # the user's current flair.

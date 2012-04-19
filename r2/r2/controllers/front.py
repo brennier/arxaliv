@@ -780,8 +780,10 @@ class FrontController(RedditController):
 
     @validate(url = VRequired('url', None),
               title = VRequired('title', None),
+              text = VRequired('text', None),
+              selftext = VRequired('selftext', None),
               then = VOneOf('then', ('tb','comments'), default = 'comments'))
-    def GET_submit(self, url, title, then):
+    def GET_submit(self, url, title, text, selftext, then):
         """Submit form."""
         resubmit = request.get.get('resubmit')
         if url and not resubmit:
@@ -812,6 +814,8 @@ class FrontController(RedditController):
                         page_classes=['submit-page'],
                         content=NewLink(url=url or '',
                                         title=title or '',
+                                        text=text or '',
+                                        selftext=selftext or '',
                                         subreddits = sr_names,
                                         captcha=captcha,
                                         resubmit=resubmit,

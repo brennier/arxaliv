@@ -255,7 +255,11 @@ ul.flat-vert {text-align: left;}
     background-image: url(../modmailgray.png);  /* SPRITE */
 }
 .user {color: gray;}
-
+.user .userkarma {
+    cursor: help;
+    font-weight: bold;
+    border-bottom: 1px dotted gray;	
+}
 
 .pagename {
     font-weight: bold;
@@ -687,7 +691,13 @@ a.author { margin-right: 0.5em; }
     font-size: xx-small;
 }
 
-.linkflair { font-size: x-small; }
+.linkflair {
+    font-size: x-small;
+    max-width: 10em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .link .flair {
     font-size: x-small;
