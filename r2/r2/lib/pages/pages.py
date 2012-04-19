@@ -372,8 +372,10 @@ class Reddit(Templated):
                             NamedButton('comments')]
         else:
             main_buttons = [
-                            NamedButton('top', dest='/'),
-                            NamedButton('hot', aliases=['/hot']),
+                            NamedButton('hot', dest='', aliases=['/hot']),
+                            NamedButton('top'),
+                            #NamedButton('top', dest='/'),
+                            #NamedButton('hot', aliases=['/hot']),
                             NamedButton('new'), 
                             #NamedButton('controversial'),
                             #NamedButton('rss feed', dest='.rss')

@@ -1286,10 +1286,13 @@ def process_votes_single(qname, limit=0):
 
         # I don't know how, but somebody is sneaking in votes
         # for subreddits
-        if isinstance(votee, (Link, Comment)):
-            print (voter, votee, dir, ip, organic, cheater)
-            handle_vote(voter, votee, dir, ip, organic,
-                        cheater = cheater, foreground=True)
+        try:
+            if isinstance(votee, (Link, Comment)):
+                print (voter, votee, dir, ip, organic, cheater)
+                handle_vote(voter, votee, dir, ip, organic,
+                            cheater = cheater, foreground=True)
+        except:
+            print 'ERROR!'
 
     amqp.consume_items(qname, _handle_vote, verbose = False)
 

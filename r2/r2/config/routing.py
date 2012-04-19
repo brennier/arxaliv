@@ -166,9 +166,9 @@ def make_map(global_conf={}, app_conf={}):
 
     mc('/health', controller='health', action='health')
 
-    #mc('/', controller='hot', action='listing')
+    mc('/', controller='hot', action='listing')
     mc('/hot/', controller='hot', action='listing')
-    mc('/', controller='browse', sort='top', t='all', time='all', action='listing', requirements=dict(sort='top', t='all', time='all'))
+    #mc('/', controller='browse', sort='top', t='week', time='week', action='listing', requirements=dict(sort='top', t='week', time='week'))
 
     listing_controllers = "hot|saved|new|randomrising|comments"
 
@@ -177,8 +177,8 @@ def make_map(global_conf={}, app_conf={}):
 
     mc('/by_id/:names', controller='byId', action='listing')
 
-    mc('/:sort', controller='browse', sort='top', action = 'listing',
-       requirements = dict(sort = 'top|controversial'))
+    mc('/:sort', controller='browse', sort='top', action = 'listing', t='week', time='week',
+       requirements = dict(sort = 'top|controversial', t='week', time='week'))
 
     mc('/message/compose', controller='message', action='compose')
     mc('/message/messages/:mid', controller='message', action='listing',

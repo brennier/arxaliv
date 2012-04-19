@@ -1142,7 +1142,7 @@ class ApiController(RedditController):
         if getattr(c.user, "suspicious", False):
             g.log.info("%s cast a %d vote on %s", c.user.name, dir, thing._fullname)
 
-        if dir<0 and isinstance(thing,Link):
+        if dir!=0 and isinstance(thing,Link):
             if Link._commenteded(c.user, thing).values()[0] == None:
                 return 'To promote healthy and open discourse, you must first comment on an article before you can vote on it'
 

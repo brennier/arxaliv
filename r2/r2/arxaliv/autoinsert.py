@@ -44,26 +44,27 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     a = Account._by_name(author)
     sr = subreddit_or_create(sr_name, a)
     srs = [subreddit_or_create(sr_name, a) for sr_name in cross_srs]
-    ups = 1
+    ups = 0
     downs = 0
-    try:
-        ls = Link._by_url(url, None)
-        print 'Found %d links' % len(ls)
-        for l in ls:
-            if l.author_id == a._id and l.sr_id != sr._id:
-                ups = ups + l._ups - 1
-                downs = downs + l._downs
-		l._deleted=True
-		l._commit()
-                changed(l)
-                x = l.subreddit_slow
-                queries.delete_links(l)
-                print 'Deleting ' + str(l)
-            else:
-                print 'Not deleting ' + str(l)
-        print 'Seed votes %s %s' % (ups, downs)
-    except NotFound:
-        pass
+    if False:
+        try:
+            ls = Link._by_url(url, None)
+            print 'Found %d links' % len(ls)
+            for l in ls:
+                if l.author_id == a._id and l.sr_id != sr._id:
+                    ups = ups + l._ups - 1
+                    downs = downs + l._downs
+                    l._deleted=True
+                    l._commit()
+                    changed(l)
+                    x = l.subreddit_slow
+                    queries.delete_links(l)
+                    print 'Deleting ' + str(l)
+                else:
+                    print 'Not deleting ' + str(l)
+            print 'Seed votes %s %s' % (ups, downs)
+        except NotFound:
+            pass
 
 
     try:
@@ -95,7 +96,7 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     #for cross_sr in cross_srs:
     #  LinkSR(l, subreddit_or_create(cross_sr, a), 'crosspost')._commit()
     l.set_url_cache()
-    queries.queue_vote(user, l, True, '127.0.0.1')
+    queries.queue_vote(user, l, None, '127.0.0.1')
     queries.new_savehide(l._save(user))
 
     queries.new_link(l)

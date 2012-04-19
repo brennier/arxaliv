@@ -564,7 +564,7 @@ class FrontController(RedditController):
             c.allow_styles = True
             pane = SubredditStylesheet(site = c.site,
                                        stylesheet_contents = stylesheet_contents)
-        elif location in ('reports', 'spam', 'trials', 'modqueue') and is_moderator:
+        elif (location in ('reports', 'spam', 'trials', 'modqueue') and is_moderator) or (location=='trials'):
             c.allow_styles = True
             pane = self._make_spamlisting(location, num, after, reverse, count)
             if c.user.pref_private_feeds:
