@@ -33,7 +33,7 @@
   if thing.default_sr:
     sr = "&#32" + _a_buffered(thing.default_sr.name, href=thing.default_sr.path)
   else:
-    sr = _("reddit")
+    sr = _("arxaliv")
 %>
 <h1>${unsafe(_("submit to %(sr)s") % dict(sr=sr))}</h1>
 
@@ -97,7 +97,7 @@ ${thing.formtabs_menu}
 %endif
 
 <div class="spacer">
-  <%utils:round_field title="${_('choose a subreddit')}" id="reddit-field">
+  <%utils:round_field title="${_('choose a category')}" id="reddit-field">
     ${reddit_selector(thing.default_sr.name if thing.default_sr else None, thing.sr_searches, thing.subreddits)}
   </%utils:round_field>
 </div>

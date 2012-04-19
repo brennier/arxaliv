@@ -353,6 +353,8 @@ class SubredditButton(NavButton):
     def __init__(self, sr):
         self.path = sr.path
         name = self.name_overrides.get(sr, sr.name)
+        if self.path=='/':
+            self.path='/hot'
         NavButton.__init__(self, name, sr.path, False,
                            isselected = (c.site == sr))
 

@@ -49,6 +49,8 @@ def make_map(global_conf={}, app_conf={}):
     mc('/traffic', controller='front', action='site_traffic')
     mc('/account-activity', controller='front', action='account_activity')
 
+    mc('/index.f', controller='feedback', action='homepage')
+
     mc('/about/message/:where', controller='message', action='listing')
     mc('/about/log', controller='front', action='moderationlog')
     mc('/about', controller='front', action='about')

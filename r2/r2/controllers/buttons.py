@@ -222,7 +222,7 @@ class ButtonsController(RedditController):
 
     def GET_iphonebookmarklets(self):
         return BoringPage(_("submit"),
-                          title = "submit to reddit",
+                          title = "submit to arxaliv",
                           show_sidebar = False, 
                           content=Bookmarklets()).render()
 

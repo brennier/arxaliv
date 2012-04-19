@@ -372,7 +372,7 @@ class Reddit(Templated):
                             NamedButton('comments')]
         else:
             main_buttons = [
-                            NamedButton('hot', dest='', aliases=['/hot']),
+                            NamedButton('hot'),#, dest='', aliases=['/hot']),
                             NamedButton('top'),
                             #NamedButton('top', dest='/'),
                             #NamedButton('hot', aliases=['/hot']),
@@ -626,6 +626,9 @@ class PrefsPage(Reddit):
         buttons += [NamedButton('delete')]
         return [PageNameNav('nomenu', title = _("preferences")), 
                 NavMenu(buttons, base_path = "/prefs", type="tabmenu")]
+
+class HomePage(Templated):
+    pass
 
 class PrefOptions(Templated):
     """Preference form for updating language and display options"""
@@ -1181,7 +1184,7 @@ class SubredditsPage(Reddit):
         ps = Reddit.rightbox(self)
         subscribe_box = SubscriptionBox(make_multi=True)
         num_reddits = len(subscribe_box.srs)
-        ps.append(SideContentBox(_("your front page reddits (%s)") %
+        ps.append(SideContentBox(_("your front page arxalivs (%s)") %
                                  num_reddits, [subscribe_box]))
         return ps
 

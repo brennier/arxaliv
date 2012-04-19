@@ -900,7 +900,6 @@ class FrontController(RedditController):
     def GET_account_activity(self):
         return AccountActivityPage().render()
 
-
 class FormsController(RedditController):
 
     def GET_password(self):
