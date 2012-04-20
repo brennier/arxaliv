@@ -372,7 +372,7 @@ class Reddit(Templated):
                             NamedButton('comments')]
         else:
             main_buttons = [
-                            NamedButton('hot'),#, dest='', aliases=['/hot']),
+                            NamedButton('hot'),#, aliases=['/hot']),
                             NamedButton('top'),
                             #NamedButton('top', dest='/'),
                             #NamedButton('hot', aliases=['/hot']),

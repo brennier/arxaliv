@@ -27,6 +27,8 @@ from r2.models import admintools
 from pylons.i18n import ungettext, _
 from r2.lib.db.queries import changed
 from r2.lib.utils.trial_utils import indict, end_trial, trial_info
+from lxml import etree
+from datetime import datetime
 
 import string
 
@@ -45,6 +47,8 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     sr = subreddit_or_create(sr_name, a)
     srs = [subreddit_or_create(sr_name, a) for sr_name in cross_srs]
     ups = 0
+    if author=='AnnalsBot':
+        ups = 1
     downs = 0
     if False:
         try:
@@ -96,7 +100,10 @@ def insert(title, sr_name, url, description, date, author='ArxivBot', cross_srs=
     #for cross_sr in cross_srs:
     #  LinkSR(l, subreddit_or_create(cross_sr, a), 'crosspost')._commit()
     l.set_url_cache()
-    queries.queue_vote(user, l, None, '127.0.0.1')
+    vote = None
+    if author == 'AnnalsBot':
+      vote = True
+    queries.queue_vote(user, l, vote, '127.0.0.1')
     queries.new_savehide(l._save(user))
 
     queries.new_link(l)
@@ -181,3 +188,42 @@ def insertAll(time, time2):
             print a
             errors = errors+1
     print 'Completed with %s errors' % errors
+
+def run_annals():
+    parser = etree.HTMLParser()
+    fname = raw_input().strip()
+    while fname:
+        tree = etree.parse(fname, parser)
+        print fname
+
+        try:
+          pdf = tree.xpath("//div[@id='pdf-link']/a[1]")[0].attrib['href']
+        except:
+          print 'No pdf'
+          fname = raw_input().strip()
+          continue
+        authors = tree.xpath("//div[@id='entry-author-info']//b/text()")
+        try:
+          abstract = str(tree.xpath("//div[@class='entry-content']/p/text()")[0])
+        except:
+          abstract = str(tree.xpath("//div[@class='entry-content']/h3/text()")[0])
+        title = ''.join(tree.xpath("//h1[@class='entry-title']//text()")).replace('\t','').replace('\n',' ').strip()
+        meta = ''.join(tree.xpath("//div[@class='entry-meta']//text()")).replace('\t','').replace('\n',' ').strip().replace(u'\xa0',' ')
+        #try:
+        date = ''.join(tree.xpath("//div[@class='metadata']/text()")).split(':')[-1].strip()
+        datet = datetime.strptime(date,'%d %B %Y')
+        if datet.year>2012:
+            datet = datetime(year=2011, month=datet.month, day=datet.day)
+        #except:
+        #  print 'No date'
+        #  fname = raw_input().strip()
+        #  continue
+
+        print title + ' [ ' + meta + ' ]'
+        print abstract
+        print pdf
+        print datet
+
+        insert(title + ' [' + meta + ']', str("annals_math"), fname, abstract, date=datet, author='AnnalsBot', cross_srs=[])
+
+        fname = raw_input().strip()

@@ -633,11 +633,14 @@ def make_feedhash(user, path):
                    ).hexdigest()
 
 def make_feedurl(user, path, ext = "rss"):
-    u = UrlParser(path)
-    u.update_query(user = user.name,
-                   feed = make_feedhash(user, path))
-    u.set_extension(ext)
-    return u.unparse()
+    try:
+            u = UrlParser(path)
+            u.update_query(user = user.name,
+                           feed = make_feedhash(user, path))
+            u.set_extension(ext)
+            return u.unparse()
+    except:
+        return path
 
 def valid_login(name, password):
     try:
