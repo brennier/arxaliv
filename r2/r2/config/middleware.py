@@ -367,6 +367,8 @@ class SubredditMiddleware(object):
             environ['PATH_INFO'] = self.sr_pattern.sub('', path) or '/'
         elif path.startswith("/reddits"):
             environ['subreddit'] = 'r'
+        elif path.startswith("/arxalivs"):
+            environ['subreddit'] = 'r'
         return self.app(environ, start_response)
 
 class DomainListingMiddleware(object):

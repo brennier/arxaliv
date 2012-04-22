@@ -859,8 +859,8 @@ class RedditsController(ListingController):
         return reddits
 
     @listing_api_doc(section=api_section.subreddits,
-                     uri='/reddits/{where}',
-                     uri_variants=['/reddits/popular', '/reddits/new', '/reddits/banned'])
+                     uri='/arxalivs/{where}',
+                     uri_variants=['/arxalivs/popular', '/arxalivs/new', '/arxalivs/banned'])
     def GET_listing(self, where, **env):
         self.where = where
         return ListingController.GET_listing(self, **env)
@@ -874,7 +874,7 @@ class MyredditsController(ListingController):
                     NavButton(getattr(plurals, "approved submitter"), 'contributor'),
                     NavButton(plurals.moderator,   'moderator'))
 
-        return [NavMenu(buttons, base_path = '/reddits/mine/',
+        return [NavMenu(buttons, base_path = '/arxalivs/mine/',
                         default = 'subscriber', type = "flatlist")]
 
     def title(self):
@@ -919,8 +919,8 @@ class MyredditsController(ListingController):
 
     @validate(VUser())
     @listing_api_doc(section=api_section.subreddits,
-                     uri='/reddits/mine/{where}',
-                     uri_variants=['/reddits/mine/subscriber', '/reddits/mine/contributor', '/reddits/mine/moderator'])
+                     uri='/arxalivs/mine/{where}',
+                     uri_variants=['/arxalivs/mine/subscriber', '/arxalivs/mine/contributor', '/arxalivs/mine/moderator'])
     def GET_listing(self, where='subscriber', **env):
         self.where = where
         return ListingController.GET_listing(self, **env)

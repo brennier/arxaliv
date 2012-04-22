@@ -50,6 +50,7 @@ def make_map(global_conf={}, app_conf={}):
     mc('/account-activity', controller='front', action='account_activity')
 
     mc('/index.f', controller='feedback', action='homepage')
+    mc('/index.f2', controller='feedback', action='homepage2')
 
     mc('/about/message/:where', controller='message', action='listing')
     mc('/about/log', controller='front', action='moderationlog')

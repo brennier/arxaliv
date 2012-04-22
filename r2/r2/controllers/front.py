@@ -676,7 +676,7 @@ class FrontController(RedditController):
 
     @base_listing
     @validate(query = nop('q'))
-    @api_doc(api_section.subreddits, uri='/reddits/search', extensions=['json', 'xml'])
+    @api_doc(api_section.subreddits, uri='/arxalivs/search', extensions=['json', 'xml'])
     def GET_search_reddits(self, query, reverse, after,  count, num):
         """Search reddits by title and description."""
         q = SubredditSearchQuery(query)

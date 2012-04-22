@@ -22,7 +22,7 @@
 from reddit_base import RedditController
 from pylons import c, request
 from pylons.i18n import _
-from r2.lib.pages import FormPage, Feedback, Captcha, PaneStack, SelfServeBlurb, FeedbackBlurb, HomePage
+from r2.lib.pages import FormPage, Feedback, Captcha, PaneStack, SelfServeBlurb, FeedbackBlurb, HomePage, HomePage2
 
 class FeedbackController(RedditController):
 
@@ -36,6 +36,9 @@ class FeedbackController(RedditController):
                         content = FeedbackBlurb(),
                         loginbox = False).render()
 
+    def GET_homepage2(self):
+        """Home page"""
+        return FormPage("The living archive of research papers", content = HomePage2(), infotext=' ', loginbox=True).render()
     def GET_homepage(self):
         """Home page"""
         return FormPage("The living archive of research papers", content = HomePage(), infotext=' ', loginbox=False).render()

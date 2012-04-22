@@ -246,7 +246,7 @@ class Reddit(Templated):
             srs = Subreddit._byID(c.site.sr_ids,data=True,
                                   return_dict=False)
             if srs:
-                ps.append(SideContentBox(_('these reddits'),[SubscriptionBox(srs=srs)]))
+                ps.append(SideContentBox(_('these arxalivs'),[SubscriptionBox(srs=srs)]))
 
         # don't show the subreddit info bar on cnames unless the option is set
         if not isinstance(c.site, FakeSubreddit) and (not c.cname or c.site.show_cname_sidebar):
@@ -291,8 +291,8 @@ class Reddit(Templated):
             delta = datetime.datetime.now(g.tz) - c.user._date
             if delta.days >= g.min_membership_create_community:
                 ps.append(SideBox(_('Create your own community'),
-                           '/reddits/create', 'create',
-                           subtitles = rand_strings.get("create_reddit", 2),
+                           '/arxalivs/create', 'create',
+                           subtitles = ['..for your research interests', '..for your own journal'],#rand_strings.get("create_reddit", 2),
                            show_cover = True, nocname=True))
 
         if not isinstance(c.site, FakeSubreddit) and not c.cname:
@@ -626,6 +626,73 @@ class PrefsPage(Reddit):
         buttons += [NamedButton('delete')]
         return [PageNameNav('nomenu', title = _("preferences")), 
                 NavMenu(buttons, base_path = "/prefs", type="tabmenu")]
+
+class HomePage2(Templated):
+    create_reddit_box = True
+    submit_box        = True
+    searchbox         = True
+    show_sidebar      = True
+    loginbox          = False
+
+    def content(self):
+        return self.content_stack((self.searchbar, self.nav_menu,
+                                   self.sr_infobar, self._content))
+
+    def rightbox(self):
+        """generates content in <div class="rightbox">"""
+
+        ps = PaneStack(css_class='spacer')
+
+        if self.searchbox:
+            ps.append(SearchForm())
+
+        if not c.user_is_loggedin and self.loginbox and not g.read_only_mode:
+            ps.append(LoginFormWide())
+
+        if c.user.pref_show_sponsorships or not c.user.gold:
+            ps.append(SponsorshipBox())
+
+        user_banned = False
+        if self.submit_box and (c.user_is_loggedin or not g.read_only_mode) and not user_banned:
+            kwargs = {
+                "title": _("Submit a link"),
+                "css_class": "submit",
+                "show_cover": True
+            }
+            if not c.user_is_loggedin or c.site.can_submit(c.user) or isinstance(c.site, FakeSubreddit):
+                kwargs["link"] = "/submit"
+                kwargs["sr_path"] = isinstance(c.site, DefaultSR) or not isinstance(c.site, FakeSubreddit),
+                kwargs["subtitles"] = [strings.submit_box_text]
+            else:
+                kwargs["disabled"] = True
+                if c.site.type == "archived":
+                    kwargs["subtitles"] = [strings.submit_box_archived_text]
+                else:
+                    kwargs["subtitles"] = [strings.submit_box_restricted_text]
+            ps.append(SideBox(**kwargs))
+
+        if self.create_reddit_box and c.user_is_loggedin:
+            delta = datetime.datetime.now(g.tz) - c.user._date
+            if delta.days >= g.min_membership_create_community:
+                ps.append(SideBox(_('Create your own community'),
+                           '/arxalivs/create', 'create',
+                           subtitles = ['..for your research interests', '..for your own journal'],#rand_strings.get("create_reddit", 2),
+                           show_cover = True, nocname=True))
+
+        subscribe_box = SubscriptionBox(make_multi=True)
+        num_reddits = len(subscribe_box.srs)
+        ps.append(SideContentBox(_("your front page arxalivs (%s)") %
+                                 num_reddits, [subscribe_box]))
+
+        if c.user.pref_clickgadget and c.recent_clicks:
+            ps.append(SideContentBox(_("Recently viewed links"),
+                                     [ClickGadget(c.recent_clicks)]))
+
+        if c.user_is_loggedin:
+            activity_link = AccountActivityBox()
+            ps.append(activity_link)
+
+        return ps
 
 class HomePage(Templated):
     pass
@@ -1169,12 +1236,12 @@ class SubredditsPage(Reddit):
         if c.user_is_loggedin:
             #add the aliases to "my reddits" stays highlighted
             buttons.append(NamedButton("mine",
-                                       aliases=['/reddits/mine/subscriber',
-                                                '/reddits/mine/contributor',
-                                                '/reddits/mine/moderator']))
+                                       aliases=['/arxalivs/mine/subscriber',
+                                                '/arxalivs/mine/contributor',
+                                                '/arxalivs/mine/moderator']))
 
-        return [PageNameNav('reddits'),
-                NavMenu(buttons, base_path = '/reddits', type="tabmenu")]
+        return [PageNameNav('arxalivs'),
+                NavMenu(buttons, base_path = '/arxalivs', type="tabmenu")]
 
     def content(self):
         return self.content_stack((self.searchbar, self.nav_menu,
@@ -1424,7 +1491,7 @@ class SubredditTopBar(CachedTemplate):
         drop_down_buttons.append(NavButton(menu.edit_subscriptions,
                                            sr_path = False,
                                            css_class = 'bottom-option',
-                                           dest = '/reddits/'))
+                                           dest = '/arxalivs/'))
         return SubredditMenu(drop_down_buttons,
                              title = _('my arxalivs'),
                              type = 'srdrop')

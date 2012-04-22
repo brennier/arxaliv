@@ -283,7 +283,7 @@ def set_subreddit():
         except NotFound:
             sr_name = chksrname(sr_name)
             if sr_name:
-                redirect_to("/reddits/search?q=%s" % sr_name)
+                redirect_to("/arxalivs/search?q=%s" % sr_name)
             elif not c.error_page and not request.path.startswith("/api/login/") :
                 abort(404)
 
