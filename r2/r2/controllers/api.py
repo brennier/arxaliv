@@ -1264,8 +1264,6 @@ class ApiController(RedditController):
             c.site.sponsorship_size = None
             c.site._commit()
         elif c.site.header:
-            # reset the header image on the page
-            jquery('#header-img').attr("src", DefaultSR.header)
             c.site.header = None
             c.site.header_size = None
             c.site._commit()
@@ -2143,6 +2141,9 @@ class ApiController(RedditController):
                 site = c.site
             else:
                 site = Subreddit._byID(link.sr_id, data=True)
+                # make sure c.user has permission to set flair on this link
+                if not c.user_is_admin and not site.is_moderator(c.user):
+                    abort(403, 'forbidden')
         else:
             flair_type = USER_FLAIR
             site = c.site
