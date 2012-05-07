@@ -53,8 +53,8 @@ class Account(Thing):
     _int_prop_suffix = '_karma'
     _essentials = ('name', )
     _defaults = dict(pref_numsites = 25,
-                     pref_frame = False,
-                     pref_frame_commentspanel = False,
+                     pref_frame = True,
+                     pref_frame_commentspanel = True,
                      pref_newwindow = False,
                      pref_clickgadget = 5,
                      pref_public_votes = False,

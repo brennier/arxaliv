@@ -175,6 +175,7 @@ class Reddit(Templated):
                 infotext = g.announcement_message
             elif c.site.firsttext:
                 infotext = c.site.firsttext
+                self.short_description = infotext
             elif g.announcement_message:
                 infotext = g.announcement_message
 

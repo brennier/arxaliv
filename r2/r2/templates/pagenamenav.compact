@@ -30,14 +30,14 @@
 
 <%def name="arxalivs()">
   <span class="hover pagename redditname">
-    ${plain_link(_("arxalivs"), "/arxalivs/", _sr_path=False)}
+    ${plain_link(_("reddits"), "/arxalivs/", _sr_path=False)}
   </span>
 </%def>
 
 
 <%def name="reddits()">
   <span class="hover pagename redditname">
-    ${plain_link(_("arxalivs"), "/arxalivs/", _sr_path=False)}
+    ${plain_link(_("reddits"), "/arxalivs/", _sr_path=False)}
   </span>
 </%def>
 
