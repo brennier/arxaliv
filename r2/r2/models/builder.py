@@ -278,6 +278,8 @@ class Builder(object):
             return False
         if hasattr(item, 'subreddit') and not item.subreddit.can_view(user):
             return True
+        if hasattr(item, 'can_view_slow') and not item.can_view_slow():
+            return True
 
 class QueryBuilder(Builder):
     def __init__(self, query, wrap=Wrapped, keep_fn=None, skip=False, **kw):
@@ -535,8 +537,18 @@ class ModeratorMessageBuilder(MessageBuilder):
     def get_tree(self):
         if self.parent:
             return conversation(self.user, self.parent)
-        return moderator_messages(self.user)
+        sr_ids = Subreddit.reverse_moderator_ids(self.user)
+        return moderator_messages(sr_ids)
 
+class MultiredditMessageBuilder(MessageBuilder):
+    def __init__(self, user, **kw):
+        self.user = user
+        MessageBuilder.__init__(self, **kw)
+
+    def get_tree(self):
+        if self.parent:
+            return conversation(self.user, self.parent)
+        return moderator_messages(c.site.sr_ids)
 
 class TopCommentBuilder(CommentBuilder):
     """A comment builder to fetch only the top-level, non-spam,

@@ -86,6 +86,8 @@ class Subreddit(Thing, Printable):
     gold_limit = 1000
     DEFAULT_LIMIT = object()
 
+    MAX_SRNAME_LENGTH = 200 # must be less than max memcached key length
+
     # note: for purposely unrenderable reddits (like promos) set author_id = -1
     @classmethod
     def _new(cls, name, title, author_id, ip, lang = g.lang, type = 'public',
@@ -116,6 +118,16 @@ class Subreddit(Thing, Printable):
 
     @classmethod
     def _by_name(cls, names, stale=False, _update = False):
+        '''
+        Usages: 
+        1. Subreddit._by_name('funny') # single sr name
+        Searches for a single subreddit. Returns a single Subreddit object or 
+        raises NotFound if the subreddit doesn't exist.
+        2. Subreddit._by_name(['aww','iama']) # list of sr names
+        Searches for a list of subreddits. Returns a dict mapping srnames to 
+        Subreddit objects. Items that were not found are ommitted from the dict.
+        If no items are found, an empty dict is returned.
+        '''
         #lower name here so there is only one cache
         names, single = tup(names, True)
 
@@ -127,6 +139,8 @@ class Subreddit(Thing, Printable):
 
             if lname in cls._specials:
                 ret[name] = cls._specials[lname]
+            elif len(lname) > Subreddit.MAX_SRNAME_LENGTH:
+                g.log.debug("Subreddit._by_name() ignoring invalid srname (too long): %s", lname)
             else:
                 to_fetch[lname] = name
 
@@ -633,17 +647,6 @@ class Subreddit(Thing, Printable):
         return not self.__eq__(other)
 
     @staticmethod
-    def user_mods_all(user, srs):
-        # Get moderator SRMember relations for all in srs
-        # if a relation doesn't exist there will be a None entry in the
-        # returned dict
-        mod_rels = SRMember._fast_query(srs, user, 'moderator', data=False)
-        if None in mod_rels.values():
-            return False
-        else:
-            return True
-
-    @staticmethod
     def get_all_mod_ids(srs):
         from r2.lib.db.thing import Merge
         srs = tup(srs)
@@ -813,6 +816,9 @@ class _DefaultSR(FakeSubreddit):
     path = '/'
     header = g.default_header_url
 
+    def is_moderator(self, user):
+        return False
+
     def get_links_sr_ids(self, sr_ids, sort, time):
         from r2.lib.db import queries
         from r2.models import Link
@@ -898,14 +904,28 @@ class MultiReddit(_DefaultSR):
         self.real_path = path
         self.sr_ids = sr_ids
 
-        srs = Subreddit._byID(self.sr_ids, return_dict=False)
+        self.srs = Subreddit._byID(self.sr_ids, return_dict=False)
         self.banned_sr_ids = []
         self.kept_sr_ids = []
-        for sr in srs:
+        for sr in self.srs:
             if sr._spam:
                 self.banned_sr_ids.append(sr._id)
             else:
                 self.kept_sr_ids.append(sr._id)
+
+    def is_moderator(self, user):
+        if not user:
+            return False
+
+        # Get moderator SRMember relations for all in srs
+        # if a relation doesn't exist there will be a None entry in the
+        # returned dict
+        mod_rels = SRMember._fast_query(self.srs, user,
+                                        'moderator', data=False)
+        if None in mod_rels.values():
+            return False
+        else:
+            return True
 
     @property
     def path(self):
@@ -955,10 +975,13 @@ class ModContribSR(_DefaultSR):
         return self.get_links_sr_ids(self.sr_ids, sort, time)
 
 class ModSR(ModContribSR):
-    name  = "communities you moderate"
-    title = "communities you moderate"
+    name  = "subreddits you moderate"
+    title = "subreddits you moderate"
     query_param = "moderator"
     real_path = "mod"
+
+    def is_moderator(self, user):
+        return True
 
 class ContribSR(ModContribSR):
     name  = "contrib"

@@ -75,6 +75,8 @@ string_dict = dict(
 
     oauth_login_msg = _("Log in or register to connect your reddit account with [%(app_name)s](%(app_about_url)s)."),
 
+    login_fallback_msg = _("try using our secure login form."),
+
     legal = _("I understand and agree that registration on or use of this site constitutes agreement to its %(user_agreement)s and %(privacy_policy)s."),
 
     friends = _('to view reddit with only submissions from your friends, use [reddit.com/r/friends](%s)'),
@@ -118,6 +120,7 @@ string_dict = dict(
         invalid_property = _('"%(cssprop)s" is not a valid CSS property'),
         invalid_val_for_prop = _('"%(cssvalue)s" is not a valid value for CSS property "%(cssprop)s"'),
         too_big = _('too big. keep it under %(max_size)dkb'),
+        max_size = _('max size: %(max_size)dkB'),
         syntax_error = _('syntax error: "%(syntaxerror)s"'),
         no_imports = _('@imports are not allowed'),
         invalid_property_list = _('invalid CSS property list "%(proplist)s"'),
@@ -128,7 +131,10 @@ string_dict = dict(
     submit_box_archived_text = _('this subreddit is archived and no longer accepting submissions.'),
     permalink_title = _("%(author)s comments on %(title)s"),
     link_info_title = _("%(title)s : %(site)s"),
-    banned_subreddit = _("""**this reddit has been banned**\n\nmost likely this was done automatically by our spam filtering program. the program is still learning, and may even have some bugs, so if you feel the ban was a mistake, please submit a link to our [request a reddit listing](%(link)s) and be sure to include the **exact name of the reddit**."""),
+    banned_subreddit_title = _("this subreddit has been banned"),
+    banned_subreddit_message = _("most likely this was done automatically by our spam filtering program. the program is still learning, and may even have some bugs, so if you feel the ban was a mistake, please submit a link to our [request a subreddit listing](%(link)s) and be sure to include the **exact name of the subreddit**."),
+    private_subreddit_title = _("this subreddit is private"),
+    private_subreddit_message = _("the moderators of this subreddit have set it to private. you must be a moderator or approved submitter to view its contents."),
     comments_panel_text = _("""The following is a sample of what Reddit users had to say about this page. The full discussion is available [here](%(fd_link)s); you can also get there by clicking the link's title (in the middle of the toolbar, to the right of the comments button)."""),
 
     submit_link = _("""You are submitting a link. The key to a successful submission is interesting content and a descriptive title."""),
@@ -160,7 +166,7 @@ string_dict = dict(
     gold_summary_signed_gift = _("You're about to give %(amount)s of reddit gold to %(recipient)s, who will be told that it came from you."),
     gold_summary_anonymous_gift = _("You're about to give %(amount)s of reddit gold to %(recipient)s. It will be an anonymous gift."),
     unvotable_message = _("sorry, this has been archived and can no longer be voted on"),
-    account_activity_blurb = _("This page shows a history of recent activity on your account. If you notice unusual activity, you should change your password immediately. Location information is guessed from your computer's IP address and may be wildly wrong, especially for visits from mobile devices."),
+    account_activity_blurb = _("This page shows a history of recent activity on your account. If you notice unusual activity, you should change your password immediately. Location information is guessed from your computer's IP address and may be wildly wrong, especially for visits from mobile devices. Note: due to a bug, private-use addresses (starting with 10.) sometimes show up erroneously in this list after regular use of the site."),
     your_current_ip_is = _("You are currently accessing reddit from this IP address: %(address)s."),
 
 )
