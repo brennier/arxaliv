@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from __future__ import with_statement
 
 from r2.models import *
@@ -33,7 +34,6 @@ from mako import filters
 import os
 import tempfile
 from r2.lib import s3cp
-from md5 import md5
 
 from r2.lib.media import upload_media
 
@@ -66,7 +66,7 @@ custom_macros = {
     'csscolor': r'(maroon|red|orange|yellow|olive|purple|fuchsia|white|lime|green|navy|blue|aqua|teal|black|silver|gray|ActiveBorder|ActiveCaption|AppWorkspace|Background|ButtonFace|ButtonHighlight|ButtonShadow|ButtonText|CaptionText|GrayText|Highlight|HighlightText|InactiveBorder|InactiveCaption|InactiveCaptionText|InfoBackground|InfoText|Menu|MenuText|Scrollbar|ThreeDDarkShadow|ThreeDFace|ThreeDHighlight|ThreeDLightShadow|ThreeDShadow|Window|WindowFrame|WindowText)|#[0-9a-f]{3}|#[0-9a-f]{6}|rgb\({w}{int}{w},{w}{int}{w},{w}{int}{w}\)|rgb\({w}{num}%{w},{w}{num}%{w},{w}{num}%{w}\)',
     'color': '{x11color}|{csscolor}',
 
-    'bg-gradient': r'none|{color}|[a-z-]*-gradient\(.*\)',
+    'bg-gradient': r'none|{color}|[a-z-]*-gradient\([^;]*\)',
     'bg-gradients': r'{bg-gradient}(?:,\s*{bg-gradient})*',
 
     'border-radius': r'(({length}|{percentage}){w}){1,2}',
@@ -177,6 +177,17 @@ class ValidationError(Exception):
         obj = str(self.obj) if hasattr(self,'obj') else ''
         return "ValidationError%s: %s (%s)" % (line, self.message, obj)
 
+def legacy_s3_url(url, site):
+    if isinstance(url, int): # legacy url, needs to be generated
+        bucket = g.s3_old_thumb_bucket
+        baseurl = "http://%s" % (bucket)
+        if g.s3_media_direct:
+            baseurl = "http://%s/%s" % (s3_direct_url, bucket)
+        url = "%s/%s_%d.png"\
+                % (baseurl, site._fullname, url)
+    url = s3_https_if_secure(url)
+    return url
+
 # local urls should be in the static directory
 local_urls = re.compile(r'\A/static/[a-z./-]+\Z')
 # substitutable urls will be css-valid labels surrounded by "%%"
@@ -211,14 +222,7 @@ def valid_url(prop,value,report):
         # the label -> image number lookup is stored on the subreddit
         if c.site.images.has_key(name):
             url = c.site.images[name]
-            if isinstance(url, int): # legacy url, needs to be generated
-                bucket = g.s3_old_thumb_bucket
-                baseurl = "http://%s" % (bucket)
-                if g.s3_media_direct:
-                    baseurl = "http://%s/%s" % (s3_direct_url, bucket)
-                url = "%s/%s_%d.png"\
-                                  % (baseurl, c.site._fullname, url)
-            url = s3_https_if_secure(url)
+            url = legacy_s3_url(url, c.site)
             value._setCssText("url(%s)"%url)
         else:
             # unknown image label -> error
@@ -229,7 +233,7 @@ def valid_url(prop,value,report):
         try:
             u = urlparse(url)
             valid_scheme = u.scheme and u.scheme in valid_url_schemes
-            valid_domain = strip_www(u.netloc) in g.allowed_css_linked_domains
+            valid_domain = u.netloc in g.allowed_css_linked_domains
         except ValueError:
             u = False
 
@@ -300,7 +304,7 @@ def validate_css(string):
     if len(string) > max_size_kb * 1024:
         report.append(ValidationError((msgs['too_big']
                                        % dict (max_size = max_size_kb))))
-        return (string, report)
+        return ('', report)
 
     if '\\' in string:
         report.append(ValidationError(_("if you need backslashes, you're doing it wrong")))
@@ -364,24 +368,15 @@ def validate_css(string):
     return parsed,report
 
 def find_preview_comments(sr):
-    if g.use_query_cache:
-        from r2.lib.db.queries import get_sr_comments, get_all_comments
+    from r2.lib.db.queries import get_sr_comments, get_all_comments
 
-        comments = get_sr_comments(c.site)
+    comments = get_sr_comments(c.site)
+    comments = list(comments)
+    if not comments:
+        comments = get_all_comments()
         comments = list(comments)
-        if not comments:
-            comments = get_all_comments()
-            comments = list(comments)
 
-        return Thing._by_fullname(comments[:25], data=True, return_dict=False)
-    else:
-        comments = Comment._query(Comment.c.sr_id == c.site._id,
-                                  limit=25, data=True)
-        comments = list(comments)
-        if not comments:
-            comments = Comment._query(limit=25, data=True)
-            comments = list(comments)
-    return comments
+    return Thing._by_fullname(comments[:25], data=True, return_dict=False)
 
 def find_preview_links(sr):
     from r2.lib.normalized_hot import get_hot
@@ -401,8 +396,10 @@ def rendered_link(links, media, compress):
     with c.user.safe_set_attr:
         c.user.pref_compress = compress
         c.user.pref_media    = media
-        links = wrap_links(links, show_nums = True, num = 1)
-        return links.render(style = "html")
+    links = wrap_links(links, show_nums = True, num = 1)
+    delattr(c.user, 'pref_compress')
+    delattr(c.user, 'pref_media') 
+    return links.render(style = "html")
 
 def rendered_comment(comments):
     return wrap_links(comments, num = 1).render(style = "html")

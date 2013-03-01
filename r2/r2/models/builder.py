@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from account import *
 from link import *
 from vote import *
@@ -28,15 +29,19 @@ from pylons import g
 from pylons.i18n import _
 
 import subreddit
+import datetime
 
 from r2.lib.comment_tree import moderator_messages, sr_conversation, conversation
 from r2.lib.comment_tree import user_messages, subreddit_messages
 
 from r2.lib.wrapped import Wrapped
 from r2.lib import utils
-from r2.lib.db import operators
+from r2.lib.db import operators, tdb_cassandra
 from r2.lib.filters import _force_unicode
 from copy import deepcopy
+from r2.lib.utils import Storage
+
+from r2.models.wiki import WIKI_RECENT_DAYS
 
 import time
 from admintools import compute_votes, admintools, ip_span
@@ -45,10 +50,11 @@ EXTRA_FACTOR = 1.5
 MAX_RECURSION = 10
 
 class Builder(object):
-    def __init__(self, wrap=Wrapped, keep_fn=None, stale=True):
+    def __init__(self, wrap=Wrapped, keep_fn=None, stale=True, spam_listing=False):
         self.stale = stale
         self.wrap = wrap
         self.keep_fn = keep_fn
+        self.spam_listing = spam_listing
 
     def keep_item(self, item):
         if self.keep_fn:
@@ -70,26 +76,33 @@ class Builder(object):
 
         authors = {}
         cup_infos = {}
-        email_attrses = {}
         friend_rels = None
         if aids:
             authors = Account._byID(aids, data=True, stale=self.stale) if aids else {}
             cup_infos = Account.cup_info_multi(aids)
-            if c.user_is_admin:
-                email_attrses = admintools.email_attrs(aids, return_dict=True)
             if user and user.gold:
                 friend_rels = user.friend_rels()
 
         subreddits = Subreddit.load_subreddits(items, stale=self.stale)
 
-        if not user:
-            can_ban_set = set()
-        else:
-            can_ban_set = set(id for (id,sr) in subreddits.iteritems()
-                              if sr.can_ban(user))
+        can_ban_set = set()
+        can_flair_set = set()
+        can_own_flair_set = set()
+        if user:
+            for sr_id, sr in subreddits.iteritems():
+                if sr.can_ban(user):
+                    can_ban_set.add(sr_id)
+                if sr.is_moderator_with_perms(user, 'flair'):
+                    can_flair_set.add(sr_id)
+                if sr.link_flair_self_assign_enabled:
+                    can_own_flair_set.add(sr_id)
 
         #get likes/dislikes
-        likes = queries.get_likes(user, items)
+        try:
+            likes = queries.get_likes(user, items)
+        except tdb_cassandra.TRANSIENT_EXCEPTIONS as e:
+            g.log.warning("Cassandra vote lookup failed: %r", e)
+            likes = {}
         uid = user._id if user else None
 
         types = {}
@@ -160,10 +173,6 @@ class Builder(object):
                     args['kind'] = 'special'
                 add_attr(w.attribs, **args)
 
-            if False and w.author and c.user_is_admin:
-                for attr in email_attrses[w.author._id]:
-                    add_attr(w.attribs, attr[2], label=attr[1])
-
             if w.author and w.author._id in cup_infos and not c.profilepage:
                 cup_info = cup_infos[w.author._id]
                 label = _(cup_info["label_template"]) % \
@@ -226,8 +235,8 @@ class Builder(object):
             w.show_reports = False
             w.show_spam    = False
             w.can_ban      = False
-            w.reveal_trial_info = False
-            w.use_big_modbuttons = False
+            w.can_flair    = False
+            w.use_big_modbuttons = self.spam_listing
 
             if (c.user_is_admin
                 or (user
@@ -250,10 +259,22 @@ class Builder(object):
                     if getattr(w, "author", None) and w.author._spam:
                         w.show_spam = "author"
 
-                elif getattr(item, 'reported', 0) > 0:
+                    if c.user == w.author and c.user._spam:
+                        w.show_spam = False
+                        w._spam = False
+                        w.use_big_modbuttons = False
+
+                elif (getattr(item, 'reported', 0) > 0
+                      and (not getattr(item, 'ignore_reports', False) or c.user_is_admin)):
                     w.show_reports = True
                     w.use_big_modbuttons = True
 
+            if (c.user_is_admin
+                or (user and hasattr(item, 'sr_id')
+                    and (item.sr_id in can_flair_set
+                         or (w.author and w.author._id == user._id
+                             and item.sr_id in can_own_flair_set)))):
+                w.can_flair = True
 
         # recache the user object: it may be None if user is not logged in,
         # whereas now we are happy to have the UnloggedUser object
@@ -282,8 +303,9 @@ class Builder(object):
             return True
 
 class QueryBuilder(Builder):
-    def __init__(self, query, wrap=Wrapped, keep_fn=None, skip=False, **kw):
-        Builder.__init__(self, wrap=wrap, keep_fn=keep_fn)
+    def __init__(self, query, wrap=Wrapped, keep_fn=None, skip=False,
+                 spam_listing=False, **kw):
+        Builder.__init__(self, wrap=wrap, keep_fn=keep_fn, spam_listing=spam_listing)
         self.query = query
         self.skip = skip
         self.num = kw.get('num')
@@ -393,8 +415,8 @@ class QueryBuilder(Builder):
                 if not (self.must_skip(i) or self.skip and not self.keep_item(i)):
                     items.append(i)
                     num_have += 1
+                    count = count - 1 if self.reverse else count + 1
                     if self.wrap:
-                        count = count - 1 if self.reverse else count + 1
                         i.num = count
                 last_item = i
         
@@ -420,6 +442,10 @@ class QueryBuilder(Builder):
                 after_count)
 
 class IDBuilder(QueryBuilder):
+    def thing_lookup(self, names):
+        return Thing._by_fullname(names, data=True, return_dict=False,
+                                  stale=self.stale)
+
     def init_query(self):
         names = list(tup(self.query))
 
@@ -462,18 +488,89 @@ class IDBuilder(QueryBuilder):
             done = True
 
         self.names, new_names = names[slice_size:], names[:slice_size]
-        new_items = Thing._by_fullname(new_names, data = True, return_dict=False, stale=self.stale)
+        new_items = self.thing_lookup(new_names)
         return done, new_items
 
+
+class CampaignBuilder(IDBuilder):
+    """Build on a list of PromoTuples."""
+
+    def __init__(self, query, wrap=Wrapped, keep_fn=None, prewrap_fn=None):
+        Builder.__init__(self, wrap=wrap, keep_fn=keep_fn)
+        self.query = query
+        self.skip = False
+        self.num = None
+        self.start_count = 0
+        self.after = None
+        self.reverse = False
+        self.prewrap_fn = prewrap_fn
+
+    def thing_lookup(self, tuples):
+        links = Link._by_fullname([t.link for t in tuples], data=True,
+                                  return_dict=True, stale=self.stale)
+
+        return [Storage({'thing': links[t.link],
+                         '_id': links[t.link]._id,
+                         'weight': t.weight,
+                         'campaign': t.campaign}) for t in tuples]
+
+    def wrap_items(self, items):
+        links = [i.thing for i in items]
+        wrapped = IDBuilder.wrap_items(self, links)
+        by_link = {w._fullname: w for w in wrapped}
+
+        ret = []
+        for i in items:
+            w = by_link[i.thing._fullname]
+            w.campaign = i.campaign
+            w.weight = i.weight
+            ret.append(w)
+
+        return ret
+
+
+class SimpleBuilder(IDBuilder):
+    def thing_lookup(self, names):
+        return names
+
+    def init_query(self):
+        items = list(tup(self.query))
+
+        if self.reverse:
+            items.reverse()
+
+        if self.after:
+            for i, item in enumerate(items):
+                if item._id == self.after:
+                    self.names = items[i + 1:]
+                    break
+            else:
+                self.names = ()
+        else:
+            self.names = items
+
+    def get_items(self):
+        items, prev, next, bcount, acount = IDBuilder.get_items(self)
+        if prev:
+            prev = prev._id
+        if next:
+            next = next._id
+        return (items, prev, next, bcount, acount)
+
+
 class SearchBuilder(IDBuilder):
+    def __init__(self, query, wrap=Wrapped, keep_fn=None, skip=False,
+                 skip_deleted_authors=True, **kw):
+        IDBuilder.__init__(self, query, wrap, keep_fn, skip, **kw)
+        self.skip_deleted_authors = skip_deleted_authors
     def init_query(self):
         self.skip = True
 
         self.start_time = time.time()
 
-        search = self.query.run()
-        names = list(search.docs)
-        self.total_num = search.hits
+        self.results = self.query.run()
+        names = list(self.results.docs)
+        self.total_num = self.results.hits
 
         after = self.after._fullname if self.after else None
 
@@ -488,8 +585,39 @@ class SearchBuilder(IDBuilder):
         # TODO: Consider a flag to disable this (and see listingcontroller.py)
         if item._spam or item._deleted:
             return False
+        elif (self.skip_deleted_authors and
+              getattr(item, "author", None) and item.author._deleted):
+            return False
         else:
             return True
+
+class WikiRevisionBuilder(QueryBuilder):
+    show_extended = True
+    
+    def wrap_items(self, items):
+        types = {}
+        wrapped = []
+        for item in items:
+            w = self.wrap(item)
+            w.show_extended = self.show_extended
+            types.setdefault(w.render_class, []).append(w)
+            wrapped.append(w)
+        
+        user = c.user
+        for cls in types.keys():
+            cls.add_props(user, types[cls])
+
+        return wrapped
+    
+    def keep_item(self, item):
+        return not item.is_hidden
+
+class WikiRecentRevisionBuilder(WikiRevisionBuilder):
+    show_extended = False
+    
+    def must_skip(self, item):
+        return (datetime.datetime.now(g.tz) - item.date).days >= WIKI_RECENT_DAYS
+        
 
 def empty_listing(*things):
     parent_name = None
@@ -562,6 +690,7 @@ class TopCommentBuilder(CommentBuilder):
     def get_items(self, num = 10):
         final = CommentBuilder.get_items(self, num = num)
         return [ cm for cm in final if not cm.deleted ]
+
 class SrMessageBuilder(MessageBuilder):
     def __init__(self, sr, **kw):
         self.sr = sr

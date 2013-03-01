@@ -11,18 +11,19 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
-#TODO byID use Things?
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from __future__ import with_statement
 
-import new, sys, sha
+import new, sys
+import hashlib
 from datetime import datetime
 from copy import copy, deepcopy
 
@@ -231,32 +232,50 @@ class DataThing(object):
         return self._dirty
 
     def _commit(self, keys=None):
-        if not self._created:
-            self._create()
+        lock = None
 
-        with g.make_lock('commit_' + self._fullname):
-            if not self._sync_latest():
+        try:
+            if not self._created:
+                begin()
+                self._create()
+                just_created = True
+            else:
+                just_created = False
+
+            lock = g.make_lock("thing_commit", 'commit_' + self._fullname)
+            lock.acquire()
+
+            if not just_created and not self._sync_latest():
                 #sync'd and we have nothing to do now, but we still cache anyway
                 self._cache_myself()
                 return
 
+            # begin is a no-op if already done, but in the not-just-created
+            # case we need to do this here because the else block is not
+            # executed when the try block is exited prematurely in any way
+            # (including the return in the above branch)
+            begin()
+
+            to_set = self._dirties.copy()
             if keys:
                 keys = tup(keys)
-                to_set = dict((k, self._dirties[k][1])
-                              for k in keys if self._dirties.has_key(k))
-            else:
-                to_set = dict((k, v[1]) for k, v in self._dirties.iteritems())
+                for key in to_set.keys():
+                    if key not in keys:
+                        del to_set[key]
 
             data_props = {}
             thing_props = {}
-            for k, v in to_set.iteritems():
+            for k, (old_value, new_value) in to_set.iteritems():
                 if k.startswith('_'):
-                    thing_props[k[1:]] = v
+                    thing_props[k[1:]] = new_value
                 else:
-                    data_props[k] = v
+                    data_props[k] = new_value
 
             if data_props:
-                self._set_data(self._type_id, self._id, **data_props)
+                self._set_data(self._type_id,
+                               self._id,
+                               just_created,
+                               **data_props)
 
             if thing_props:
                 self._set_props(self._type_id, self._id, **thing_props)
@@ -269,6 +288,16 @@ class DataThing(object):
                 self._dirties.clear()
 
             self._cache_myself()
+        except:
+            rollback()
+            raise
+        else:
+            commit()
+        finally:
+            if lock:
+                lock.release()
+
+        g.plugins.on_thing_commit(self, to_set)
 
     @classmethod
     def _load_multi(cls, need):
@@ -320,7 +349,7 @@ class DataThing(object):
                        (prop, self, self._int_props, self._data_int_props))
                 raise ValueError, msg
 
-        with g.make_lock('commit_' + self._fullname):
+        with g.make_lock("thing_commit", 'commit_' + self._fullname):
             self._sync_latest()
             old_val = getattr(self, prop)
             if self._defaults.has_key(prop) and self._defaults[prop] == old_val:
@@ -342,9 +371,13 @@ class DataThing(object):
     def _id36(self):
         return to36(self._id)
 
+    @classmethod
+    def _fullname_from_id36(cls, id36):
+        return cls._type_prefix + to36(cls._type_id) + '_' + id36
+
     @property
     def _fullname(self):
-        return self._type_prefix + to36(self._type_id) + '_' + to36(self._id)
+        return self._fullname_from_id36(self._id36)
 
     #TODO error when something isn't found?
     @classmethod
@@ -775,30 +808,6 @@ def Relation(type1, type2, denorm1 = None, denorm2 = None):
             self._name = 'un' + self._name
 
         @classmethod
-        def _fast_query_timestamp_touch(cls, thing1):
-            thing_utils.set_last_modified_for_cls(thing1, cls._type_name)
-
-        @classmethod
-        def _can_skip_lookup(cls, thing1, thing2):
-            # we can't possibly have voted on things that were created
-            # after the last time we voted. for relations that have an
-            # invariant like this we can avoid doing these lookups as
-            # long as the relation takes responsibility for keeping
-            # the timestamp up-to-date
-
-            last_done = thing_utils.get_last_modified_for_cls(
-                thing1, cls._type_name)
-
-            if not last_done:
-                return False
-
-            if thing2._date > last_done:
-                return True
-
-            return False
-
-
-        @classmethod
         def _fast_query(cls, thing1s, thing2s, name, data=True, eager_load=True,
                         thing_data=False, timestamp_optimize = False):
             """looks up all the relationships between thing1_ids and
@@ -826,9 +835,6 @@ def Relation(type1, type2, denorm1 = None, denorm2 = None):
                 t2_ids = set()
                 names = set()
                 for t1, t2, name in pairs:
-                    if timestamp_optimize and cls._can_skip_lookup(thing1_dict[t1],
-                                                                   thing2_dict[t2]):
-                        continue
                     t1_ids.add(t1)
                     t2_ids.add(t2)
                     names.add(name)
@@ -896,7 +902,6 @@ class Query(object):
         self._read_cache = kw.get('read_cache')
         self._write_cache = kw.get('write_cache')
         self._cache_time = kw.get('cache_time', 0)
-        self._stats_collector = kw.get('stats_collector')
         self._limit = kw.get('limit')
         self._data = kw.get('data')
         self._sort = kw.get('sort', ())
@@ -996,13 +1001,10 @@ class Query(object):
             rules.sort()
             for r in rules:
                 i += str(r)
-        return sha.new(i).hexdigest()
+        return hashlib.sha1(i).hexdigest()
 
     def __iter__(self):
         used_cache = False
-
-        if self._stats_collector:
-            self._stats_collector.add(self)
 
         def _retrieve():
             return self._cursor().fetchall()
@@ -1018,7 +1020,7 @@ class Query(object):
             # it's not in the cache, and we have the power to
             # update it, which we should do in a lock to prevent
             # concurrent requests for the same data
-            with g.make_lock("lock_%s" % self._iden()):
+            with g.make_lock("thing_query", "lock_%s" % self._iden()):
                 # see if it was set while we were waiting for our
                 # lock
                 names = cache.get(self._iden(), allow_local = False) \

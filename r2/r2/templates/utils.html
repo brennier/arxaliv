@@ -1,32 +1,33 @@
-## The contents of this file are subject to the Common Public Attribution.
+## The contents of this file are subject to the Common Public Attribution
 ## License Version 1.0. (the "License"); you may not use this file except in
 ## compliance with the License. You may obtain a copy of the License at
 ## http://code.reddit.com/LICENSE. The License is based on the Mozilla Public
 ## License Version 1.1, but Sections 14 and 15 have been added to cover use of
 ## software over a computer network and provide for limited attribution for the
-## Original Developer. In addition, Exhibit A has been modified to be consistent
-## with Exhibit B.
+## Original Developer. In addition, Exhibit A has been modified to be
+## consistent with Exhibit B.
 ##
 ## Software distributed under the License is distributed on an "AS IS" basis,
 ## WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 ## the specific language governing rights and limitations under the License.
 ##
-## The Original Code is Reddit.
+## The Original Code is reddit.
 ##
 ## The Original Developer is the Initial Developer.  The Initial Developer of
-## the Original Code is CondeNet, Inc.
+## the Original Code is reddit Inc.
 ##
-## All portions of the code written by CondeNet are Copyright (c) 2006-2010
-## CondeNet, Inc. All Rights Reserved.
-################################################################################
+## All portions of the code written by reddit are Copyright (c) 2006-2012
+## reddit Inc. All Rights Reserved.
+###############################################################################
 
 <%!
    import json
    from r2.models import FakeSubreddit
-   from r2.lib.filters import spaceCompress, unsafe
-   from r2.lib.template_helpers import add_sr, js_config, static
+   from r2.lib.filters import spaceCompress, unsafe, safemarkdown
+   from r2.lib.template_helpers import add_sr, js_config, static, html_datetime
    from r2.lib.utils import cols, long_datetime, timesince
-   from r2.lib.tracking import UserInfo
+   from r2.lib import tracking
+   from datetime import datetime
 %>
 <%def name="tags(**kw)">
 %for k, v in kw.iteritems():
@@ -52,8 +53,8 @@
 id="${arg}_${thing and thing._fullname or ''}"
 </%def>
 
-<%def name="css_class(thing)">
-${' '+thing.css_class if hasattr(thing, 'css_class') and thing.css_class else ''}
+<%def name="classes(*class_names)">
+class="${" ".join(filter(None, class_names))}"
 </%def>
 
 <%def name="submit_form(onsubmit='', action='', _class='', method='post', _id='', **params)">
@@ -266,8 +267,41 @@ ${unsafe(txt)}
   </input>
 </%def>
 
+<%def name="ajax_upload(target, form_id)">
+  <form method="post" enctype="multipart/form-data" target="${form_id}-iframe"
+        id="${form_id}" class="ajax-upload-form pretty-form" action="${target}"
+        onsubmit="return post_multipart_form(this, '${target}')">
+    <input type="hidden" name="id" value="#${form_id}" />
+    <input type="hidden" name="uh" value="${c.modhash}" />
+    <input type="file" name="file" />
+    <button type="submit">
+      ${_('upload')}
+    </button>
+    ${error_field('IMAGE_ERROR', '')}
+    %if caller:
+      ${caller.body()}
+    %endif
+    <span class="status"></span>
+    <script type="text/javascript">
+      function completedUploadImage (status, img_src, name, errors, form_id) {
+        /* should only be called when the uploaded file is too large */
+        if (status == "failed") {
+          $("#${form_id}").find(".status").html("");
+          for (var i in errors) {
+            $("#${form_id}").find(".error." + errors[i][0])
+                .show().text(errors[i][1]);
+          }
+        }
+      }
+    </script>
+    <iframe src="about:blank" name="${form_id}-iframe" id="${form_id}-iframe">
+    </iframe>
+  </form>
+</%def>
+
 <%def name="image_upload(post_target, current_image = None, onsubmit = '', 
-                         onchange = '', label = '', form_id = 'image-upload', ask_type = False)">
+                         onchange = '', label = '', form_id = 'image-upload',
+                         ask_type = False, hidden_data=None)">
   <form id="${form_id}" enctype="multipart/form-data"
         class="image-upload"
         target="upload-iframe"
@@ -283,6 +317,11 @@ ${unsafe(txt)}
             <input type="hidden" name="r"  value="${c.site.name}" />
           %endif
           <input type="hidden" name="formid" value="${form_id}" />
+          %if hidden_data:
+            %for name, value in hidden_data.iteritems():
+              <input type="hidden" name="${name}" value="${value}" />
+            %endfor
+          %endif
           <br/>
           %if ask_type:
             <label for="img_type">${_("Type: ")}</label>
@@ -368,9 +407,9 @@ ${unsafe(txt)}
 </%def>
 
 
-<%def name="js_setup()">
+<%def name="js_setup(extra_config=None)">
   <script type="text/javascript" id="config">
-    r.setup(${unsafe(json.dumps(js_config()))})
+    r.setup(${unsafe(json.dumps(js_config(extra_config)))})
   </script>
 </%def>
 
@@ -381,9 +420,9 @@ ${unsafe(txt)}
     var _gaq = _gaq || [];
     _gaq.push(
         ['_setAccount', '${g.googleanalytics}'],
-        ['_setCustomVar', 1, 'site', '${UserInfo.get_site()}', 3],
-        ['_setCustomVar', 2, 'srpath', '${UserInfo.get_srpath()}', 3],
-        ['_setCustomVar', 3, 'usertype', '${UserInfo.get_usertype()}', 2],
+        ['_setCustomVar', 1, 'site', '${tracking.get_site()}', 3],
+        ['_setCustomVar', 2, 'srpath', '${tracking.get_srpath()}', 3],
+        ['_setCustomVar', 3, 'usertype', '${"loggedin" if c.user_is_loggedin else "guest"}', 2],
         ['_setCustomVar', 4, 'uitype', '${uitype}', 3],
         ['_trackPageview']
     );
@@ -484,14 +523,23 @@ ${unsafe(txt)}
   </tr>
 </%def>
 
-<%def name="reddit_selector(default_sr, sr_searches, subreddits)">
+<%def name="reddit_selector(default_sr, sr_searches, subreddits, required=False)">
+    <%doc>
+      Fires custom event when subreddit selection changes. Add handler like:
+      $("#sr-autocomplete").bind("sr-changed", function() { dostuff; })
+    </%doc>
+
     <div id="sr-autocomplete-area">
       <input id="sr-autocomplete" name="sr" type="text"
              autocomplete="off"
              onkeyup="sr_name_up(event)"
              onkeydown="return sr_name_down(event)"
              onblur="hide_sr_name_list()"
-             value = "${default_sr}" />
+             value = "${default_sr}"
+             % if required:
+             required
+             % endif
+             />
       <ul id="sr-drop-down">
         <li class="sr-name-row"
             onmouseover="highlight_reddit(this)"
@@ -521,7 +569,7 @@ ${unsafe(txt)}
 <%def name="timestamp(date, since=None)">
   ## todo: use pubdate attribute once things are <article> tags.
   ## note: comment and link templates will pass a CachedVariable stub as since.
-  <time title="${long_datetime(date)}" datetime="${date.isoformat()}">
+  <time title="${long_datetime(date)}" datetime="${html_datetime(date)}">
     ${unsafe(since or timesince(date))}
   </time>
 </%def>
@@ -552,4 +600,20 @@ ${unsafe(txt)}
      >
        ${label}
   </a>
+</%def>
+
+<%def name="edited(thing, lastedited=None)">
+  %if isinstance(thing.editted, datetime):
+    <time class="edited-timestamp" title="${_('last edited')} ${unsafe(lastedited or timesince(thing.editted))} ${_('ago')}" datetime="${html_datetime(thing.editted)}">*</time>
+  %elif thing.editted:
+    <em>*</em>
+  %endif
+</%def>
+
+<%def name="md(text, wrap=False)">
+  ${unsafe(safemarkdown(text, wrap=wrap))}
+</%def>
+
+<%def name="_md(text, wrap=False)">
+  ${md(_(text), wrap=wrap)}
 </%def>

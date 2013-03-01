@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from r2.models import *
 from r2.lib.memoize import memoize
 from r2.lib.normalized_hot import get_hot
@@ -31,11 +32,20 @@ import random
 from time import time
 
 organic_lifetime = 5*60
-organic_length   = 30
 organic_max_length= 50
 
 def keep_fresh_links(item):
-    return (c.user_is_loggedin and c.user._id == item.author_id) or item.fresh
+    if c.user_is_loggedin and c.user._id == item.author_id:
+        return True
+
+    if item._spam or item._deleted:
+        return False
+
+    from r2.lib.promote import is_promo
+    if is_promo(item):
+        return True
+
+    return item.fresh
 
 @memoize('cached_organic_links', time = organic_lifetime)
 def cached_organic_links(*sr_ids):
@@ -64,8 +74,6 @@ def cached_organic_links(*sr_ids):
     return link_names
 
 def organic_links(user):
-    from r2.controllers.reddit_base import organic_pos
-
     sr_ids = Subreddit.user_subreddits(user)
     # make sure that these are sorted so the cache keys are constant
     sr_ids.sort()
@@ -79,8 +87,3 @@ def organic_links(user):
     sr_ids.sort()
     return cached_organic_links(*sr_ids)[:organic_max_length]
 
-def update_pos(pos):
-    "Update the user's current position within the cached organic list."
-    from r2.controllers import reddit_base
-
-    reddit_base.set_organic_pos(pos)

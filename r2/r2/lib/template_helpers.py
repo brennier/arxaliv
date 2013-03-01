@@ -11,35 +11,37 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from r2.models import *
-from filters import unsafe, websafe, _force_unicode
+from filters import unsafe, websafe, _force_unicode, _force_utf8
 from r2.lib.utils import vote_hash, UrlParser, timesince, is_subdomain
 
 from r2.lib.media import s3_direct_url
 
-from mako.filters import url_escape
+import babel.numbers
 import simplejson
 import os.path
 from copy import copy
 import random
 import urlparse
-from pylons import g, c
+import calendar
+from pylons import g, c, request
 from pylons.i18n import _, ungettext
-from paste.util.mimeparse import desired_matches
 
-def is_encoding_acceptable(encoding_to_check):
-    "Check if a content encoding is acceptable to the user agent."
-    header = request.headers.get('Accept-Encoding', '')
-    return 'gzip' in desired_matches(['gzip'], header)
 
+static_text_extensions = {
+    '.js': 'js',
+    '.css': 'css',
+    '.less': 'css'
+}
 def static(path, allow_gzip=True):
     """
     Simple static file maintainer which automatically paths and
@@ -51,8 +53,8 @@ def static(path, allow_gzip=True):
     """
     dirname, filename = os.path.split(path)
     extension = os.path.splitext(filename)[1]
-    is_text = extension in ('.js', '.css')
-    can_gzip = is_text and is_encoding_acceptable('gzip')
+    is_text = extension in static_text_extensions
+    can_gzip = is_text and 'gzip' in request.accept_encoding
     should_gzip = allow_gzip and can_gzip
 
     path_components = []
@@ -69,6 +71,18 @@ def static(path, allow_gzip=True):
         query = None
         suffix = '.gzip' if should_gzip and g.static_secure_pre_gzipped else ''
     else:
+        #path_components.append(c.site.static_path)
+        #query = None
+
+        #if g.uncompressedJS:
+        #    query = 'v=' + str(random.randint(1, 1000000))
+
+            # unminified static files are in type-specific subdirectories
+        #    if not dirname and is_text:
+        #        path_components.append(static_text_extensions[extension])
+
+        #    actual_filename = filename
+
         scheme = None
         domain = None
         suffix = ''
@@ -109,7 +123,7 @@ def s3_https_if_secure(url):
          replace = "https://%s/" % s3_direct_url
     return url.replace("http://", replace)
 
-def js_config():
+def js_config(extra_config=None):
     config = {
         # is the user logged in?
         "logged": c.user_is_loggedin and c.user.name,
@@ -117,8 +131,6 @@ def js_config():
         "post_site": c.site.name if not c.default_sr else "",
         # are we in an iframe?
         "cnameframe": bool(c.cname and not c.authorized_cname),
-        # this page's referer
-        "referer": _force_unicode(request.referer) or "",
         # the user's voting hash
         "modhash": c.modhash or False,
         # the current rendering style
@@ -139,18 +151,18 @@ def js_config():
           "loading": _("loading...")
         },
         "is_fake": isinstance(c.site, FakeSubreddit),
-        "tracking_domain": g.tracking_domain,
+        "fetch_trackers_url": g.fetch_trackers_url,
         "adtracker_url": g.adtracker_url,
         "clicktracker_url": g.clicktracker_url,
+        "uitracker_url": g.uitracker_url,
         "static_root": static(''),
     }
+
+    if extra_config:
+        config.update(extra_config)
+
     return config
 
-def generateurl(context, path, **kw):
-    if kw:
-        return path + '?' + '&'.join(["%s=%s"%(k, url_escape(v)) \
-                                      for k, v in kw.iteritems() if v])
-    return path
 
 def class_dict():
     t_cls = [Link, Comment, Message, Subreddit]
@@ -175,6 +187,19 @@ def calc_time_period(comment_time):
             rv = "comment-period-%d" % i
 
     return rv
+
+def comment_label(num_comments=None):
+    if not num_comments:
+        # generates "comment" the imperative verb
+        com_label = _("comment {verb}")
+        com_cls = 'comments empty'
+    else:
+        # generates "XX comments" as a noun
+        com_label = ungettext("comment", "comments", num_comments)
+        com_label = strings.number_label % dict(num=num_comments,
+                                                thing=com_label)
+        com_cls = 'comments'
+    return com_label, com_cls
 
 def replace_render(listing, item, render_func):
     def _replace_render(style = None, display = True):
@@ -228,16 +253,7 @@ def replace_render(listing, item, render_func):
                 replacements['votehash'] = vote_hash(c.user, item,
                                                      listing.vote_hash_type)
         if hasattr(item, "num_comments"):
-            if not item.num_comments:
-                # generates "comment" the imperative verb
-                com_label = _("comment {verb}")
-                com_cls = 'comments empty'
-            else:
-                # generates "XX comments" as a noun
-                com_label = ungettext("comment", "comments", item.num_comments)
-                com_label = strings.number_label % dict(num=item.num_comments,
-                                                        thing=com_label)
-                com_cls = 'comments'
+            com_label, com_cls = comment_label(item.num_comments)
             if style == "compact":
                 com_label = unicode(item.num_comments)
             replacements['numcomments'] = com_label
@@ -262,6 +278,10 @@ def replace_render(listing, item, render_func):
                 replacements['timesince'] = timesince(item._date)
 
             replacements['time_period'] = calc_time_period(item._date)
+
+        # compute the last edited time here so we don't end up caching it
+        if hasattr(item, "editted") and not isinstance(item.editted, bool):
+            replacements['lastedited'] = timesince(item.editted)
 
         # Set in front.py:GET_comments()
         replacements['previous_visits_hex'] = c.previous_visits_hex
@@ -354,13 +374,13 @@ def add_sr(path, sr_path = True, nocname=False, force_hostname = False, retain_e
     parses the path and updates it to include the subreddit path
     according to the rules set by its arguments:
 
-     * force_hostname: if True, force the url's hotname to be updated
+     * force_hostname: if True, force the url's hostname to be updated
        even if it is already set in the path, and subject to the
        c.cname/nocname combination.  If false, the path will still
        have its domain updated if no hostname is specified in the url.
-    
+
      * nocname: when updating the hostname, overrides the value of
-       c.cname to set the hotname to g.domain.  The default behavior
+       c.cname to set the hostname to g.domain.  The default behavior
        is to set the hostname consistent with c.cname.
 
      * sr_path: if a cname is not used for the domain, updates the
@@ -383,7 +403,7 @@ def add_sr(path, sr_path = True, nocname=False, force_hostname = False, retain_e
         else:
             u.hostname = get_domain(cname = (c.cname and not nocname),
                                     subreddit = False)
-    
+
     if c.secure:
         u.scheme = "https"
 
@@ -400,7 +420,7 @@ def join_urls(*urls):
     """joins a series of urls together without doubles slashes"""
     if not urls:
         return
-    
+
     url = urls[0]
     for u in urls[1:]:
         if not url.endswith('/'):
@@ -471,7 +491,7 @@ def add_attr(attrs, kind, label=None, link=None, cssclass=None, symbol=None):
         if not label:
             label = _('reddit admin, speaking officially')
         if not link:
-            link = '/help/faq#Whorunsreddit'
+            link = '/about/team'
     elif kind in ('X', '@'):
         priority = 5
         cssclass = 'gray'
@@ -501,3 +521,36 @@ def add_attr(attrs, kind, label=None, link=None, cssclass=None, symbol=None):
         raise ValueError ("Got weird kind [%s]" % kind)
 
     attrs.append( (priority, symbol, cssclass, label, link, img) )
+
+
+def search_url(query, subreddit, restrict_sr="off", sort=None, recent=None):
+    import urllib
+    query = _force_utf8(query)
+    url_query = {"q": query}
+    if restrict_sr:
+        url_query["restrict_sr"] = restrict_sr
+    if sort:
+        url_query["sort"] = sort
+    if recent:
+        url_query["t"] = recent
+    path = "/r/%s/search?" % subreddit if subreddit else "/search?"
+    path += urllib.urlencode(url_query)
+    return path
+
+
+def format_number(number, locale=None):
+    if not locale:
+        locale = c.locale
+
+    return babel.numbers.format_number(number, locale=locale)
+
+
+def html_datetime(date):
+    # Strip off the microsecond to appease the HTML5 gods, since
+    # datetime.isoformat() returns too long of a microsecond value.
+    # http://www.whatwg.org/specs/web-apps/current-work/multipage/common-microsyntaxes.html#times
+    return date.replace(microsecond=0).isoformat()
+
+
+def js_timestamp(date):
+    return '%d' % (calendar.timegm(date.timetuple()) * 1000)

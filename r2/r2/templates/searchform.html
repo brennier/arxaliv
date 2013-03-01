@@ -4,21 +4,21 @@
 ## http://code.reddit.com/LICENSE. The License is based on the Mozilla Public
 ## License Version 1.1, but Sections 14 and 15 have been added to cover use of
 ## software over a computer network and provide for limited attribution for the
-## Original Developer. In addition, Exhibit A has been modified to be consistent
-## with Exhibit B.
+## Original Developer. In addition, Exhibit A has been modified to be
+## consistent with Exhibit B.
 ##
 ## Software distributed under the License is distributed on an "AS IS" basis,
 ## WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 ## the specific language governing rights and limitations under the License.
 ##
-## The Original Code is Reddit.
+## The Original Code is reddit.
 ##
 ## The Original Developer is the Initial Developer.  The Initial Developer of
-## the Original Code is CondeNet, Inc.
+## the Original Code is reddit Inc.
 ##
-## All portions of the code written by CondeNet are Copyright (c) 2006-2010
-## CondeNet, Inc. All Rights Reserved.
-################################################################################
+## All portions of the code written by reddit are Copyright (c) 2006-2012
+## reddit Inc. All Rights Reserved.
+###############################################################################
 
 <%!
    from r2.models.subreddit import DefaultSR
@@ -27,32 +27,30 @@
 
 <%def name="search_faq()">
   <div id="moresearchinfo">
-  <p>${_('use the following search parameters to narrow your results:')}</p>
+  <p>use the following search parameters to narrow your results:</p>
 
   <dl>
-      <dt>arxaliv:'{name}'</dt>
-      <dd>${_('find things posted in {name} only')}</dd>
-      <dt>author:'{username}'</dt>
-      <dd>${_('return things submitted by {username} only')}</dd>
-      <dt>site:'{domain}'</dt>
-      <dd>${_('get links to pages on {domain} only')}</dd>
-      <dt>url:'{text}'</dt>
-      <dd>${_('search for {text} in url')}</dd>
-      <dt>selftext:'{text}'</dt>
-      <dd>${_('search for {text} in self post contents')}</dd>
-      <dt>is_self:{1|0}</dt>
-      <dd>${_('include (1) or exclude (0) self posts')}</dd>
-      <dt>over18:{1|0}</dt>
-      <dd>${_('include (1) or exclude (0) results tagged NSFW')}</dd>
+      <dt>arxaliv:<i>{name}</i></dt>
+      <dd>${_('find submissions in {name}')}</dd>
+      <dt>author:<i>username</i></dt>
+      <dd>${_('find submissions by "username"')}</dd>
+      <dt>site:<i>example.com</i></dt>
+      <dd>${_('find submissions from "example.com"')}</dd>
+      <dt>url:<i>text</i></dt>
+      <dd>${_('search for "text" in url')}</dd>
+      <dt>selftext:<i>text</i></dt>
+      <dd>${_('search for "text" in self post contents')}</dd>
+      <dt>self:yes (or self:no)</dt>
+      <dd>${_('include (or exclude) self posts')}</dd>
   </dl>
 
-  <p>e.g. <code>(and 'Riemann Hypothesis' arxaliv:math.NT site:annals.math.princeton.edu</code></p>
-  <p><a href="http://www.reddit.com/help/search">${_('see the search faq for details.')}</a></p>
+  <p>e.g.&#32;<code>'Riemann Hypothesis' arxaliv:math.NT site:annals.math.princeton.edu</code></p>
+  <p><a href="http://www.reddit.com/wiki/search">${_('see the search faq for details.')}</a></p>
   </div>
 
-  <p><a href="http://www.reddit.com/help/search" id="search_showmore">${_('advanced search: by author, community...')}</a></p>
+  <p><a href="http://www.reddit.com/wiki/search" id="search_showmore">${_('advanced search: by author, community...')}</a></p>
 </%def>
-<form action="${add_sr('/search')}" id="search">
+<form action="${add_sr('/search')}" id="search" role="search">
   <input type="text" id="search_q"
          %if thing.prev_search:
            value="${thing.prev_search}" style="color:black"
@@ -67,7 +65,6 @@
       % endif
 
       ${search_faq()}
-
   </div>
   %else:
     %if not thing.site or isinstance(thing.site, DefaultSR):
@@ -78,7 +75,7 @@
       ${_('limit my search to %(path)s') % dict(path=thing.site.path.rstrip('/'))}</label>
     %endif
     ${search_faq()}
-    <input type="submit" />
+    <input type="submit" value="${_('search reddit')}" />
   %endif
 
   %for k, v in thing.search_params.iteritems():

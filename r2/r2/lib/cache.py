@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from threading import local
 from hashlib import md5
 import cPickle as pickle
@@ -597,7 +598,7 @@ class CassandraCacheChain(CacheChain):
 
     def mutate(self, key, mutation_fn, default = None, willread=True):
         """Mutate a Cassandra key as atomically as possible"""
-        with self.make_lock('mutate_%s' % key):
+        with self.make_lock("permacache_mutate", 'mutate_%s' % key):
             # we have to do some of the the work of the cache chain
             # here so that we can be sure that if the value isn't in
             # memcached (an atomic store), we fetch it from Cassandra

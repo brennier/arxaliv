@@ -11,23 +11,25 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from reddit_base import RedditController
 import StringIO
 import r2.lib.captcha as captcha
-from pylons import c
+from pylons import c, response
 
 class CaptchaController(RedditController):
     def GET_captchaimg(self, iden):
         image = captcha.get_image(iden)
         f = StringIO.StringIO()
         image.save(f, "PNG")
-        return self.sendpng(f.getvalue())
+        response.content_type = "image/png;"
+        return f.getvalue()
     

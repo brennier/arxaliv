@@ -11,25 +11,26 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
 
 from datetime import datetime
 from itertools import ifilter
-import time, md5
+import time
+import hashlib
 
 import simplejson
 
 from r2.lib.utils import rfc3339_date_str, http_date_str, to36
 from r2.lib.memoize import memoize
 from r2.lib.template_helpers import get_domain
-from pylons import g, c
+from pylons import g, c, response
 
 PERIODS = [600, 300, 60]
 MIN_PERIOD = min(PERIODS)
@@ -52,7 +53,7 @@ def make_last_time(period):
     return make_cur_time(period) - period
 
 def make_sup_id(user, action):
-    sup_id = md5.new(user.name + action).hexdigest()
+    sup_id = hashlib.md5(user.name + action).hexdigest()
     #cause cool kids only use part of the hash
     return sup_id[:10]
 
@@ -103,10 +104,10 @@ def sup_json(period):
 
 def set_sup_header(user, action):
     sup_id = make_sup_id(user, action)
-    c.response.headers['x-sup-id'] = sup_url() + '#' + sup_id
+    response.headers['x-sup-id'] = sup_url() + '#' + sup_id
 
 def set_expires_header():
     seconds = make_cur_time(MIN_PERIOD) + MIN_PERIOD
     expire_time = datetime.fromtimestamp(seconds, g.tz)
-    c.response.headers['expires'] = http_date_str(expire_time)
+    response.headers['expires'] = http_date_str(expire_time)
 

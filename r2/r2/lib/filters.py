@@ -11,25 +11,29 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 import cgi
 import os
 import urllib
 import re
+
+from collections import Counter
+
 import snudown
 from cStringIO import StringIO
 
 from xml.sax.handler import ContentHandler
 from lxml.sax import saxify
 import lxml.etree
-from BeautifulSoup import BeautifulSoup
+from BeautifulSoup import BeautifulSoup, Tag
 
 from pylons import g, c
 
@@ -41,6 +45,10 @@ SC_ON = "<!-- SC_ON -->"
 MD_START = '<div class="md">'
 MD_END = '</div>'
 
+WIKI_MD_START = '<div class="md wiki">'
+WIKI_MD_END = '</div>'
+
+custom_img_url = re.compile(r'\A%%([a-zA-Z0-9\-]+)%%$')
 
 def python_websafe(text):
     return text.replace('&', "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -127,13 +135,6 @@ def websafe(text=''):
     #wrap the response in _Unsafe so make_websafe doesn't unescape it
     return _Unsafe(c_websafe(text))
 
-from mako.filters import url_escape
-def edit_comment_filter(text = ''):
-    try:
-        text = unicode(text, 'utf-8')
-    except TypeError:
-        text = unicode(text)
-    return url_escape(text)
 
 valid_link_schemes = (
     '/',
@@ -173,17 +174,22 @@ class SouptestSaxHandler(ContentHandler):
 
 markdown_ok_tags = {
     'div': ('class'),
-    'a': set(('href', 'title', 'target', 'nofollow')),
-    'table': ("align", ),
-    'th': ("align", ),
-    'td': ("align", ),
+    'a': set(('href', 'title', 'target', 'nofollow', 'rel')),
+    'img': set(('src', 'alt')),
     }
+
 markdown_boring_tags =  ('p', 'em', 'strong', 'br', 'ol', 'ul', 'hr', 'li',
                          'pre', 'code', 'blockquote', 'center',
-                         'tbody', 'thead', 'tr', 'sup', 'del',
-                         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',)
+                          'sup', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',)
+
+markdown_user_tags = ('table', 'th', 'tr', 'td', 'tbody',
+                     'tbody', 'thead', 'tr', 'tfoot', 'caption')
+
 for bt in markdown_boring_tags:
-    markdown_ok_tags[bt] = ()
+    markdown_ok_tags[bt] = ('id')
+
+for bt in markdown_user_tags:
+    markdown_ok_tags[bt] = ('colspan', 'rowspan', 'cellspacing', 'cellpadding', 'align', 'scope')
 
 markdown_xhtml_dtd_path = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -191,11 +197,14 @@ markdown_xhtml_dtd_path = os.path.join(
 
 markdown_dtd = '<!DOCTYPE div- SYSTEM "file://%s">' % markdown_xhtml_dtd_path
 
-def markdown_souptest(text, nofollow=False, target=None):
+def markdown_souptest(text, nofollow=False, target=None, renderer=None):
     if not text:
         return text
-
-    smd = safemarkdown(text, nofollow=nofollow, target=target)
+    
+    if not renderer:
+        smd = safemarkdown(text, nofollow=nofollow, target=target)
+    elif renderer == 'wiki':
+        smd = wikimarkdown(text)
 
     # Prepend a DTD reference so we can load up definitions of all the standard
     # XHTML entities (&nbsp;, etc.).
@@ -226,8 +235,99 @@ def safemarkdown(text, nofollow=False, wrap=True, **kwargs):
     if wrap:
         return SC_OFF + MD_START + text + MD_END + SC_ON
     else:
-        return text
+        return SC_OFF + text + SC_ON
 
+def wikimarkdown(text):
+    from r2.lib.cssfilter import legacy_s3_url
+    
+    def img_swap(tag):
+        name = tag.get('src')
+        name = custom_img_url.search(name)
+        name = name and name.group(1)
+        if name and c.site.images.has_key(name):
+            url = c.site.images[name]
+            url = legacy_s3_url(url, c.site)
+            tag['src'] = url
+        else:
+            tag.extract()
+    
+    nofollow = True
+    target = None
+    
+    text = snudown.markdown(_force_utf8(text), nofollow, target,
+                            renderer=snudown.RENDERER_WIKI)
+    
+    # TODO: We should test how much of a load this adds to the app
+    soup = BeautifulSoup(text.decode('utf-8'))
+    images = soup.findAll('img')
+    
+    if images:
+        [img_swap(image) for image in images]
+    
+    inject_table_of_contents(soup, prefix="wiki")
+    
+    text = str(soup)
+    
+    return SC_OFF + WIKI_MD_START + text + WIKI_MD_END + SC_ON
+
+title_re = re.compile('[^\w.-]')
+header_re = re.compile('^h[1-6]$')
+def inject_table_of_contents(soup, prefix):
+    header_ids = Counter()
+    headers = soup.findAll(header_re)
+    if not headers:
+        return
+    tocdiv = Tag(soup, "div", [("class", "toc")])
+    parent = Tag(soup, "ul")
+    parent.level = 0
+    tocdiv.append(parent)
+    level = 0
+    previous = 0
+    for header in headers:
+        contents = u''.join(header.findAll(text=True))
+        
+        # In the event of an empty header, skip
+        if not contents:
+            continue
+        
+        # Convert html entities to avoid ugly header ids
+        aid = unicode(BeautifulSoup(contents, convertEntities=BeautifulSoup.XML_ENTITIES))
+        # Prefix with PREFIX_ to avoid ID conflict with the rest of the page
+        aid = u'%s_%s' % (prefix, aid.replace(" ", "_").lower())
+        # Convert down to ascii replacing special characters with hex
+        aid = str(title_re.sub(lambda c: '.%X' % ord(c.group()), aid))
+        
+        # Check to see if a tag with the same ID exists
+        id_num = header_ids[aid] + 1
+        header_ids[aid] += 1
+        # Only start numbering ids with the second instance of an id
+        if id_num > 1:
+            aid = '%s%d' % (aid, id_num)
+        
+        header['id'] = aid
+        
+        li = Tag(soup, "li")
+        a = Tag(soup, "a", [("href", "#%s" % aid)])
+        a.string = contents
+        li.append(a)
+        
+        thislevel = int(header.name[-1])
+        
+        if previous and thislevel > previous:
+            newul = Tag(soup, "ul")
+            newul.level = thislevel
+            parent.append(newul)
+            parent = newul
+            level += 1
+        elif level and thislevel < previous:
+            while level and parent.level > thislevel:
+                parent = parent.findParent("ul")
+                level -= 1
+        
+        previous = thislevel
+        parent.append(li)
+    
+    soup.insert(0, tocdiv)
 
 def keep_space(text):
     text = websafe(text)

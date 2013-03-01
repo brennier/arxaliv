@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 # The contents of this file are subject to the Common Public Attribution
 # License Version 1.0. (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
@@ -13,25 +12,37 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
 
 from ez_setup import use_setuptools
 use_setuptools()
 
 from setuptools import find_packages
 from distutils.core import setup, Extension
-from Cython.Distutils import build_ext
 import os
 import fnmatch
 
-commands = {"build_ext": build_ext}
+
+commands = {}
+
+
+try:
+    from Cython.Distutils import build_ext
+except ImportError:
+    pass
+else:
+    commands.update({
+        "build_ext": build_ext
+    })
+
+
 try:
     from babel.messages import frontend as babel
     commands.update({
@@ -59,11 +70,12 @@ discount_path = "r2/lib/contrib/discount"
 
 setup(
     name="r2",
-    version="",
+    version="0.1",
     install_requires=[
-        "Routes<=1.8",
-        "Pylons==0.9.6.2",
-        "webhelpers==0.6.4",
+        "webob==1.0.8",
+        "Pylons==0.9.7",
+        "Routes==1.11",
+        "mako>=0.5",
         "boto >= 2.0",
         "pytz",
         "pycrypto",
@@ -75,18 +87,20 @@ setup(
         "chardet",
         "psycopg2",
         "pycountry",
-        "pycassa",
+        "pycassa>=1.7.0",
         "PIL",
         "pycaptcha",
         "amqplib",
-        "pylibmc==1.2.1-dev",
+        "pylibmc>=1.2.1",
         "py-bcrypt",
-        "python-statsd",
-        "snudown",
+        "snudown>=1.1.0",
+        "l2cs>=2.0.2",
+        "lxml",
+        "kazoo",
+        "stripe",
     ],
     dependency_links=[
-        "https://github.com/downloads/reddit/pylibmc/pylibmc-1.2.1-dev.tar.gz#egg=pylibmc-1.2.1-dev",
-        "https://nodeload.github.com/reddit/snudown/tarball/v1.0.4#egg=snudown-1.0.4",
+        "https://github.com/reddit/snudown/archive/v1.1.3.tar.gz#egg=snudown-1.1.3",
     ],
     packages=find_packages(exclude=["ez_setup"]),
     cmdclass=commands,
@@ -101,12 +115,8 @@ setup(
     entry_points="""
     [paste.app_factory]
     main=r2:make_app
-    [paste.app_install]
-    main=pylons.util:PylonsInstaller
     [paste.paster_command]
     run = r2.commands:RunCommand
     shell = pylons.commands:ShellCommand
-    controller = pylons.commands:ControllerCommand
-    restcontroller = pylons.commands:RestControllerCommand
     """,
 )

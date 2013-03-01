@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 """
 For talking to authorize.net credit card payments via their XML api.
 
@@ -26,26 +27,48 @@ This file consists mostly of wrapper classes for dealing with their
 API, while the actual useful functions live in interaction.py
 """
 
-from pylons import g
+import re
+import socket
 from httplib import HTTPSConnection
 from urlparse import urlparse
-import socket, re
-from BeautifulSoup import BeautifulStoneSoup
-from r2.lib.utils import iters, Storage
 
-from r2.models import NotFound
+from BeautifulSoup import BeautifulStoneSoup
+from pylons import g
+from xml.sax.saxutils import escape
+
+from r2.lib.export import export
+from r2.lib.utils import iters, Storage
 from r2.models.bidding import CustomerID, PayID, ShippingAddress
 
-# list of the most common errors.
-Errors = Storage(TESTMODE = "E00009",
-                 TRANSACTION_FAIL = "E00027",
-                 DUPLICATE_RECORD = "E00039", 
-                 RECORD_NOT_FOUND = "E00040",
-                 TOO_MANY_PAY_PROFILES = "E00042",
-                 TOO_MANY_SHIP_ADDRESSES = "E00043")
+__all__ = ["PROFILE_LIMIT"]
 
+
+# list of the most common errors.
+Errors = Storage(TESTMODE="E00009",
+                 TRANSACTION_FAIL="E00027",
+                 DUPLICATE_RECORD="E00039", 
+                 RECORD_NOT_FOUND="E00040",
+                 TOO_MANY_PAY_PROFILES="E00042",
+                 TOO_MANY_SHIP_ADDRESSES="E00043")
+
+PROFILE_LIMIT = 10 # max payment profiles per user allowed by authorize.net
+
+@export
 class AuthorizeNetException(Exception):
-    pass
+    def __init__(self, msg):
+        # don't let CC info show up in logs
+        msg = re.sub("<cardNumber>\d+(\d{4})</cardNumber>", 
+                     "<cardNumber>...\g<1></cardNumber>",
+                     msg)
+        msg = re.sub("<cardCode>\d+</cardCode>",
+                     "<cardCode>omitted</cardCode>",
+                     msg)
+        super(AuthorizeNetException, self).__init__(msg)
+
+
+
+# xml tags whose content shouldn't be escaped 
+_no_escape_list = ["extraOptions"]
 
 
 class SimpleXMLObject(object):
@@ -64,15 +87,20 @@ class SimpleXMLObject(object):
     @staticmethod
     def simple_tag(name, content, **attrs):
         attrs = " ".join('%s="%s"' % (k, v) for k, v in attrs.iteritems())
-        if attrs: attrs = " " + attrs
+        if attrs:
+            attrs = " " + attrs
         return ("<%(name)s%(attrs)s>%(content)s</%(name)s>" %
-                dict(name = name, content = content, attrs = attrs))
+                dict(name=name, content=content, attrs=attrs))
 
     def toXML(self):
         content = []
         def process(k, v):
             if isinstance(v, SimpleXMLObject):
                 v = v.toXML()
+            elif v is not None:
+                v = unicode(v)
+                if k not in _no_escape_list:
+                    v = escape(v) # escape &, <, and >
             if v is not None:
                 content.append(self.simple_tag(k, v))
 
@@ -107,9 +135,12 @@ class SimpleXMLObject(object):
     def _wrapper(self, content):
         return content
 
+
 class Auth(SimpleXMLObject):
     _keys = ["name", "transactionKey"]
 
+
+@export
 class Address(SimpleXMLObject):
     _keys = ["firstName", "lastName", "company", "address",
              "city", "state", "zip", "country", "phoneNumber",
@@ -123,9 +154,9 @@ class Address(SimpleXMLObject):
         SimpleXMLObject.__init__(self, **kw)
 
 
+@export
 class CreditCard(SimpleXMLObject):
     _keys = ["cardNumber", "expirationDate", "cardCode"]
-
 
 
 class Profile(SimpleXMLObject):
@@ -136,23 +167,22 @@ class Profile(SimpleXMLObject):
              "email", "customerProfileId", "paymentProfiles", "shipToList",
              "validationMode"]
     def __init__(self, user, paymentProfiles, address,
-                 validationMode = None):
-        SimpleXMLObject.__init__(self, merchantCustomerId = user._fullname,
-                                 description = user.name, email = "",
-                                 paymentProfiles = paymentProfiles,
-                                 shipToList = address,
-                                 validationMode = validationMode,
+                 validationMode=None):
+        SimpleXMLObject.__init__(self, merchantCustomerId=user._fullname,
+                                 description=user.name, email="",
+                                 paymentProfiles=paymentProfiles,
+                                 shipToList=address,
+                                 validationMode=validationMode,
                                  customerProfileId=CustomerID.get_id(user))
-
 
 class PaymentProfile(SimpleXMLObject):
     _keys = ["billTo", "payment", "customerPaymentProfileId", "validationMode"]
-    def __init__(self, billTo, card, paymentId = None,
-                 validationMode = None):
-        SimpleXMLObject.__init__(self, billTo = billTo,
-                                 customerPaymentProfileId = paymentId,
-                                 payment = SimpleXMLObject(creditCard = card),
-                                 validationMode = validationMode)
+    def __init__(self, billTo, card, paymentId=None,
+                 validationMode=None):
+        SimpleXMLObject.__init__(self, billTo=billTo,
+                                 customerPaymentProfileId=paymentId,
+                                 payment=SimpleXMLObject(creditCard=card),
+                                 validationMode=validationMode)
 
     @classmethod
     def fromXML(cls, res):
@@ -160,38 +190,56 @@ class PaymentProfile(SimpleXMLObject):
         return cls(Address.fromXML(res.billto),
                    CreditCard.fromXML(res.payment), payid)
 
+
+@export
 class Order(SimpleXMLObject):
     _keys = ["invoiceNumber", "description", "purchaseOrderNumber"]
+
 
 class Transaction(SimpleXMLObject):
     _keys = ["amount", "customerProfileId", "customerPaymentProfileId",
              "transId", "order"]
 
-    def __init__(self, amount, profile_id, pay_id, trans_id = None,
-                 order = None):
-        SimpleXMLObject.__init__(self, amount = amount,
-                                 customerProfileId = profile_id,
-                                 customerPaymentProfileId = pay_id,
-                                 transId = trans_id,
-                                 order = order)
+    def __init__(self, amount, profile_id, pay_id, trans_id=None,
+                 order=None):
+        SimpleXMLObject.__init__(self, amount=amount,
+                                 customerProfileId=profile_id,
+                                 customerPaymentProfileId=pay_id,
+                                 transId=trans_id,
+                                 order=order)
 
     def _wrapper(self, content):
         return self.simple_tag(self._name(), content)
 
+
 # authorize and charge
+@export
 class ProfileTransAuthCapture(Transaction): pass
 
-# only authorize (no charge is made)
-class ProfileTransAuthOnly(Transaction): pass
-# charge only (requires previous auth_only)
-class ProfileTransPriorAuthCapture(Transaction): pass
-# stronger than above: charge even on decline (not sure why you would want to)
-class ProfileTransCaptureOnly(Transaction): pass
-# refund a transaction
-class ProfileTransRefund(Transaction): pass
-# void a transaction
-class ProfileTransVoid(Transaction): pass
 
+# only authorize (no charge is made)
+@export
+class ProfileTransAuthOnly(Transaction): pass
+
+
+# charge only (requires previous auth_only)
+@export
+class ProfileTransPriorAuthCapture(Transaction): pass
+
+
+# stronger than above: charge even on decline (not sure why you would want to)
+@export
+class ProfileTransCaptureOnly(Transaction): pass
+
+
+# refund a transaction
+@export
+class ProfileTransRefund(Transaction): pass
+
+
+# void a transaction
+@export
+class ProfileTransVoid(Transaction): pass
 
 
 #-----
@@ -200,8 +248,8 @@ class AuthorizeNetRequest(SimpleXMLObject):
 
     @property
     def merchantAuthentication(self):
-        return Auth(name = g.authorizenetname,
-                    transactionKey = g.authorizenetkey)
+        return Auth(name=g.authorizenetname,
+                    transactionKey=g.authorizenetkey)
 
     def _wrapper(self, content):
         return ('<?xml version="1.0" encoding="utf-8"?>' +
@@ -212,7 +260,7 @@ class AuthorizeNetRequest(SimpleXMLObject):
         u = urlparse(g.authorizenetapi)
         try:
             conn = HTTPSConnection(u.hostname, u.port)
-            conn.request("POST", u.path, self.toXML(),
+            conn.request("POST", u.path, self.toXML().encode('utf-8'),
                          {"Content-type": "text/xml"})
             res = conn.getresponse()
             res = self.handle_response(res.read())
@@ -232,11 +280,13 @@ class AuthorizeNetRequest(SimpleXMLObject):
 
     _autoclose_re = re.compile("<([^/]+)/>")
     def _autoclose_handler(self, m):
-        return "<%(m)s></%(m)s>" % dict(m = m.groups()[0])
+        return "<%(m)s></%(m)s>" % dict(m=m.groups()[0])
 
     def handle_response(self, res):
         res = self._autoclose_re.sub(self._autoclose_handler, res)
-        res = BeautifulStoneSoup(res, markupMassage=False)
+        res = BeautifulStoneSoup(res, 
+                                 markupMassage=False, 
+                                 convertEntities=BeautifulStoneSoup.XML_ENTITIES)
         if res.resultcode.contents[0] == u"Ok":
             return self.process_response(res)
         else:
@@ -254,10 +304,10 @@ class CustomerRequest(AuthorizeNetRequest):
         else:
             cust_id = CustomerID.get_id(user)
             self._user = user
-        AuthorizeNetRequest.__init__(self, customerProfileId = cust_id, **kw)
-
+        AuthorizeNetRequest.__init__(self, customerProfileId=cust_id, **kw)
 
 # --- real request classes below
+
 
 class CreateCustomerProfileRequest(AuthorizeNetRequest):
     """
@@ -268,12 +318,12 @@ class CreateCustomerProfileRequest(AuthorizeNetRequest):
     """
     _keys = AuthorizeNetRequest._keys + ["profile", "validationMode"]
 
-    def __init__(self, user, validationMode = None):
+    def __init__(self, user, validationMode=None):
         # cache the user object passed in
         self._user = user
         AuthorizeNetRequest.__init__(self,
-                                     profile = Profile(user, None, None), 
-                                     validationMode = validationMode)
+                                     profile=Profile(user, None, None), 
+                                     validationMode=validationMode)
 
     def process_response(self, res):
         customer_id = int(res.customerprofileid.contents[0])
@@ -285,17 +335,28 @@ class CreateCustomerProfileRequest(AuthorizeNetRequest):
         return (CustomerID.get_id(self._user) or
                 AuthorizeNetRequest.make_request(self))
 
-    re_lost_id = re.compile("A duplicate record with id (\d+) already exists")
+    re_lost_id = re.compile("A duplicate record with ID (\d+) already exists")
     def process_error(self, res):
         if self.is_error_code(res, Errors.DUPLICATE_RECORD):
-            # D'oh.  We lost one
-            m = self.re_lost_id.match(res.find("text").contents[0]).groups()
-            CustomerID.set(self._user, m[0])
+            # authorize.net has a record for this customer but we don't. get
+            # the correct id from the error message and update our db
+            matches = self.re_lost_id.match(res.find("text").contents[0])
+            if matches:
+                match_groups = matches.groups()
+                CustomerID.set(self._user, match_groups[0])
+                g.log.debug("Updated missing authorize.net id for user %s" % self._user._id)
+            else:
+                # could happen if the format of the error message changes.
+                msg = ("Failed to fix duplicate authorize.net profile id. "
+                       "re_lost_id regexp may need to be updated. Response: %r" 
+                       % res)
+                raise AuthorizeNetException(msg)
         # otherwise, we might have sent a user that already had a customer ID
         cust_id = CustomerID.get_id(self._user)
         if cust_id:
             return cust_id
         return AuthorizeNetRequest.process_error(self, res)
+
 
 class CreateCustomerPaymentProfileRequest(CustomerRequest):
     """
@@ -304,11 +365,11 @@ class CreateCustomerPaymentProfileRequest(CustomerRequest):
     """
     _keys = (CustomerRequest._keys + ["paymentProfile", "validationMode"])
 
-    def __init__(self, user, address, creditcard, validationMode = None):
+    def __init__(self, user, address, creditcard, validationMode=None):
         CustomerRequest.__init__(self, user,
-                                 paymentProfile = PaymentProfile(address,
-                                                                 creditcard),
-                                 validationMode = validationMode)
+                                 paymentProfile=PaymentProfile(address,
+                                                               creditcard),
+                                 validationMode=validationMode)
 
     def process_response(self, res):
         pay_id = int(res.customerpaymentprofileid.contents[0])
@@ -322,7 +383,8 @@ class CreateCustomerPaymentProfileRequest(CustomerRequest):
             if len(profiles) == 1:
                 return profiles[0].customerPaymentProfileId
             return
-        return CustomerRequest.process_error(self,res)
+        return CustomerRequest.process_error(self, res)
+
 
 class CreateCustomerShippingAddressRequest(CustomerRequest):
     """
@@ -363,7 +425,7 @@ class GetCustomerPaymentProfileRequest(CustomerRequest):
     def process_error(self, res):
         if self.is_error_code(res, Errors.RECORD_NOT_FOUND):
             PayID.delete(self._user, self.customerPaymentProfileId)
-        return CustomerRequest.process_error(self,res)
+        return CustomerRequest.process_error(self, res)
 
 
 class GetCustomerShippingAddressRequest(CustomerRequest):
@@ -385,7 +447,8 @@ class GetCustomerShippingAddressRequest(CustomerRequest):
     def process_error(self, res):
         if self.is_error_code(res, Errors.RECORD_NOT_FOUND):
             ShippingAddress.delete(self._user, self.customerAddressId)
-        return CustomerRequest.process_error(self,res)
+        return CustomerRequest.process_error(self, res)
+ 
 
 class GetCustomerProfileIdsRequest(AuthorizeNetRequest):
     """
@@ -394,6 +457,7 @@ class GetCustomerProfileIdsRequest(AuthorizeNetRequest):
     """
     def process_response(self, res):
         return [int(x.contents[0]) for x in res.ids.findAll('numericstring')]
+
 
 class GetCustomerProfileRequest(CustomerRequest): 
     """
@@ -425,7 +489,7 @@ class GetCustomerProfileRequest(CustomerRequest):
         for profile in res.findAll("paymentprofiles"):
             a = Address.fromXML(profile)
             cc = CreditCard.fromXML(profile.payment)
-            payprof = PaymentProfile(a, cc,int(a.customerPaymentProfileId))
+            payprof = PaymentProfile(a, cc, int(a.customerPaymentProfileId))
             PayID.add(acct, a.customerPaymentProfileId)
             profiles.append(payprof)
 
@@ -443,20 +507,22 @@ class DeleteCustomerProfileRequest(CustomerRequest):
     def process_error(self, res):
         if self.is_error_code(res, Errors.RECORD_NOT_FOUND):
             CustomerID.delete(self._user)
-        return CustomerRequest.process_error(self,res)
+        return CustomerRequest.process_error(self, res)
+
 
 class DeleteCustomerPaymentProfileRequest(GetCustomerPaymentProfileRequest):
     """
     Delete a customer shipping address
     """
     def process_response(self, res):
-        PayID.delete(self._user,self.customerPaymentProfileId)
+        PayID.delete(self._user, self.customerPaymentProfileId)
         return True
 
     def process_error(self, res):
         if self.is_error_code(res, Errors.RECORD_NOT_FOUND):
-            PayID.delete(self._user,self.customerPaymentProfileId)
-        return GetCustomerPaymentProfileRequest.process_error(self,res)
+            PayID.delete(self._user, self.customerPaymentProfileId)
+        return GetCustomerPaymentProfileRequest.process_error(self, res)
+
 
 class DeleteCustomerShippingAddressRequest(GetCustomerShippingAddressRequest):
     """
@@ -469,9 +535,7 @@ class DeleteCustomerShippingAddressRequest(GetCustomerShippingAddressRequest):
     def process_error(self, res):
         if self.is_error_code(res, Errors.RECORD_NOT_FOUND):
             ShippingAddress.delete(self._user, self.customerAddressId)
-        GetCustomerShippingAddressRequest.process_error(self,res)
-
-
+        GetCustomerShippingAddressRequest.process_error(self, res)
 
 
 # TODO
@@ -487,12 +551,12 @@ class UpdateCustomerPaymentProfileRequest(CreateCustomerPaymentProfileRequest):
     For updating the user's payment profile
     """
     def __init__(self, user, paymentid, address, creditcard, 
-                 validationMode = None):
+                 validationMode=None):
         CustomerRequest.__init__(self, user,
                                  paymentProfile=PaymentProfile(address,
                                                                creditcard,
                                                                paymentid),
-                                 validationMode = validationMode)
+                                 validationMode=validationMode)
 
     def process_response(self, res):
         return self.paymentProfile.customerPaymentProfileId
@@ -506,12 +570,10 @@ class UpdateCustomerShippingAddressRequest(
     def __init__(self, user, address_id, address):
         address.customerAddressId = address_id
         CreateCustomerShippingAddressRequest.__init__(self, user,
-                                                      address = address)
+                                                      address=address)
 
     def process_response(self, res):
         return True
-
-
 
 
 class CreateCustomerProfileTransactionRequest(AuthorizeNetRequest):
@@ -546,10 +608,10 @@ class CreateCustomerProfileTransactionRequest(AuthorizeNetRequest):
                      "cav_response")
 
     # list of casts for the response fields given above
-    response_types = dict(response_code = int,
-                          response_subcode = int,
-                          response_reason_code = int,
-                          trans_id = int)
+    response_types = dict(response_code=int,
+                          response_subcode=int,
+                          response_reason_code=int,
+                          trans_id=int)
 
     def __init__(self, **kw):
         from pylons import g
@@ -571,7 +633,7 @@ class CreateCustomerProfileTransactionRequest(AuthorizeNetRequest):
             return (False, self.package_response(res))
         elif self.is_error_code(res, Errors.TESTMODE):
             return (None, None)
-        return AuthorizeNetRequest.process_error(self,res)
+        return AuthorizeNetRequest.process_error(self, res)
 
 
     def package_response(self, res):
@@ -583,4 +645,19 @@ class CreateCustomerProfileTransactionRequest(AuthorizeNetRequest):
             except ValueError:
                 pass
         return s
+
+
+class GetSettledBatchListRequest(AuthorizeNetRequest):
+    _keys = AuthorizeNetRequest._keys + ["includeStatistics", 
+                                         "firstSettlementDate", 
+                                         "lastSettlementDate"]
+    def __init__(self, start_date, end_date, **kw):
+        AuthorizeNetRequest.__init__(self, 
+                                     includeStatistics=1,
+                                     firstSettlementDate=start_date.isoformat(),
+                                     lastSettlementDate=end_date.isoformat(),
+                                     **kw)
+
+    def process_response(self, res):
+        return res
 

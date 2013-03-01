@@ -11,19 +11,20 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
-from validator import *
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from reddit_base import MinimalController
 
 from r2.lib.scraper import get_media_embed
-from r2.lib.pages import MediaEmbedBody, ComScore, render_ad
+from r2.lib.pages import MediaEmbedBody, render_ad, render_ad_by_codename
+from r2.lib.validator import *
 
 from pylons import request
 from pylons.controllers.util import abort
@@ -53,12 +54,9 @@ class MediaembedController(MinimalController):
 
         return MediaEmbedBody(body = content).render()
 
-    def GET_comscore(self, reddit = None):
-        return ComScore().render(style="html")
-
 class AdController(MinimalController):
     def request_key(self):
-        return make_key('request_key',
+        return make_key('request',
                         c.lang,
                         c.content_langs,
                         request.host,
@@ -74,5 +72,5 @@ class AdController(MinimalController):
         if not codename:
             abort(404)
         c.render_style = "html"
-        return render_ad(codename=codename)
+        return render_ad_by_codename(codename)
 

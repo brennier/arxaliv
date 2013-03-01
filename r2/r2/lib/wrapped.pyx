@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from itertools import chain
 from datetime import datetime
 import re, types
@@ -399,6 +400,13 @@ class Templated(object):
         if style: del kw['style']
         return self._render(attr, style, **kw)
 
+    def call(self, name, *args, **kwargs):
+        from pylons import g
+        from r2.lib.filters import spaceCompress
+        res = self.template().get_def(name).render(*args, **kwargs)
+        if not g.template_debug:
+            res = spaceCompress(res)
+        return res
 
 class Uncachable(Exception): pass
 

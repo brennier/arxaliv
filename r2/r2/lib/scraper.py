@@ -11,14 +11,14 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
 
 from pylons import g
 from r2.lib import utils
@@ -96,7 +96,7 @@ def fetch_url(url, referer = None, retries = 1, dimension = False):
     nothing = None if dimension else (None, None)
     url = clean_url(url)
     #just basic urls
-    if not url.startswith('http://'):
+    if not (url.startswith('http://') or url.startswith('https://')):
         return nothing
     while True:
         try:
@@ -659,6 +659,19 @@ class OEmbed(Scraper):
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self.url)
 
+    def utf8_encode(self, input):
+        """UTF-8 encodes any strings in an object (from json.loads)"""
+        if isinstance(input, dict):
+            return {self.utf8_encode(key): self.utf8_encode(value)
+                    for key, value in input.iteritems()}
+        elif isinstance(input, list):
+            return [self.utf8_encode(item)
+                    for item in input]
+        elif isinstance(input, unicode):
+            return input.encode('utf-8')
+        else:
+            return input
+
     def download(self):
         self.api_params.update( { 'url':self.url})
         query = urllib.urlencode(self.api_params)      
@@ -674,7 +687,8 @@ class OEmbed(Scraper):
             return None
 
         try:
-            self.oembed  = json.loads(self.content)
+            self.oembed = json.loads(self.content,
+                                     object_hook=self.utf8_encode)
         except ValueError, e:
             log.error('oEmbed call (%s) return invalid json for %s' 
                       %(api_url, self.url))
@@ -1789,8 +1803,7 @@ def submit_all():
         except Exception, e:
             print e
 
-        if g.write_query_queue:
-            queries.new_link(l)
+        queries.new_link(l)
 
         links.append(l)
 

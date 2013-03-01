@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 class BooleanOp(object):
     def __init__(self, *ops):
         self.ops = ops
@@ -28,6 +29,7 @@ class BooleanOp(object):
 
 class or_(BooleanOp): pass
 class and_(BooleanOp): pass
+class not_(BooleanOp): pass
 
 class op(object):
     def __init__(self, lval, lval_name, rval):
@@ -48,6 +50,7 @@ class lt(op): pass
 class lte(op): pass
 class gt(op): pass
 class gte(op): pass
+class in_(op): pass
 
 class Slot(object):
     def __init__(self, lval):
@@ -77,6 +80,9 @@ class Slot(object):
 
     def __ge__(self, other):
         return gte(self, self.name, other)
+
+    def in_(self, other):
+        return in_(self, self.name, other)
 
 class Slots(object):
     def __getattr__(self, attr):
@@ -119,3 +125,4 @@ class sort(object):
 
 class asc(sort): pass
 class desc(sort):pass
+class shuffled(desc): pass

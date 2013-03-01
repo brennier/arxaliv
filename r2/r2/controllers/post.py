@@ -11,29 +11,27 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from r2.lib.pages import *
 from reddit_base import cross_domain
 from api import ApiController
 from r2.lib.utils import Storage, query_string, UrlParser
 from r2.lib.emailer import opt_in, opt_out
+from r2.lib.validator import *
 from pylons import request, c, g
-from validator import *
 from pylons.i18n import _
 from r2.models import *
-import sha
+import hashlib
 
 class PostController(ApiController):
-    def api_wrapper(self, kw):
-        return Storage(**kw)
-
     def set_options(self, all_langs, pref_lang, **kw):
         if c.errors.errors:
             print "fucker"
@@ -145,10 +143,7 @@ class PostController(ApiController):
                 c.user.pref_over_18 = True
                 c.user._commit()
             else:
-                ip_hash = sha.new(request.ip).hexdigest()
-                domain = g.domain if not c.frameless_cname else None
-                c.cookies.add('over18', ip_hash,
-                              domain = domain)
+                c.cookies.add("over18", "1")
             return self.redirect(dest)
         else:
             return self.redirect('/')
@@ -179,7 +174,7 @@ class PostController(ApiController):
     def POST_login(self, dest, *a, **kw):
         ApiController._handle_login(self, *a, **kw)
         c.render_style = "html"
-        c.response_content_type = ""
+        response.content_type = "text/html"
 
         if c.errors:
             return LoginPage(user_login = request.post.get('user'),
@@ -191,7 +186,7 @@ class PostController(ApiController):
     def POST_reg(self, dest, *a, **kw):
         ApiController._handle_register(self, *a, **kw)
         c.render_style = "html"
-        c.response_content_type = ""
+        response.content_type = "text/html"
 
         if c.errors:
             return LoginPage(user_reg = request.post.get('user'),

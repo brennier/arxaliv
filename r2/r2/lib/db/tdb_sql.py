@@ -11,34 +11,98 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
+from copy import deepcopy
 from datetime import datetime
 import cPickle as pickle
-from copy import deepcopy
-import random
-
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgres
-
-from r2.lib.utils import storage, storify, iters, Results, tup, TransSet
+import logging
 import operators
-from pylons import g, c
+import re
+import threading
+
+from pylons import g, c, request
+import sqlalchemy as sa
+
+from r2.lib import filters
+from r2.lib.utils import (
+    iters,
+    Results,
+    simple_traceback,
+    storage,
+    tup,
+)
+
+
 dbm = g.dbm
 predefined_type_ids = g.predefined_type_ids
-
-import logging
 log_format = logging.Formatter('sql: %(message)s')
-
 max_val_len = 1000
 
-transactions = TransSet()
+
+class TransactionSet(threading.local):
+    """A manager for SQL transactions.
+
+    This implements a thread local meta-transaction which may span multiple
+    databases.  The existing tdb_sql code calls add_engine before executing
+    writes.  If thing.py calls begin then these calls will actually kick in
+    and start a transaction that must be committed or rolled back by thing.py.
+
+    Because this involves creating transactions at the connection level, this
+    system implicitly relies on using the threadlocal strategy for the
+    sqlalchemy engines.
+
+    This system is a bit awkward, and should be replaced with something that
+    doesn't use module-globals when doing a cleanup of tdb_sql.
+
+    """
+
+    def __init__(self):
+        self.transacting_engines = set()
+        self.transaction_begun = False
+
+    def begin(self):
+        """Indicate that a transaction has begun."""
+        self.transaction_begun = True
+
+    def add_engine(self, engine):
+        """Add a database connection to the meta-transaction if active."""
+        if not self.transaction_begun:
+            return
+
+        if engine not in self.transacting_engines:
+            engine.begin()
+            self.transacting_engines.add(engine)
+
+    def commit(self):
+        """Commit the meta-transaction."""
+        try:
+            for engine in self.transacting_engines:
+                engine.commit()
+        finally:
+            self._clear()
+
+    def rollback(self):
+        """Roll back the meta-transaction."""
+        try:
+            for engine in self.transacting_engines:
+                engine.rollback()
+        finally:
+            self._clear()
+
+    def _clear(self):
+        self.transacting_engines.clear()
+        self.transaction_begun = False
+
+
+transactions = TransactionSet()
 
 MAX_THING_ID = 9223372036854775807 # http://www.postgresql.org/docs/8.3/static/datatype-numeric.html
 
@@ -300,27 +364,19 @@ def get_write_table(tables):
     else:
         return tables[0]
 
-import re, traceback, cStringIO as StringIO
-_spaces = re.compile('[\s]+')
 def add_request_info(select):
-    from pylons import request
-    from r2.lib import filters
     def sanitize(txt):
-        return _spaces.sub(' ', txt).replace("/", "|").replace("-", "_").replace(';', "").replace("*", "").replace(r"/", "")
-    s = StringIO.StringIO()
-    traceback.print_stack( file = s)
-    tb = s.getvalue()
-    if tb:
-        tb = tb.split('\n')[0::2]
-        tb = [x.split('/')[-1] for x in tb if "/r2/" in x]
-        tb = '\n'.join(tb[-15:-2])
+        return "".join(x if x.isalnum() else "."
+                       for x in filters._force_utf8(txt))
+
+    tb = simple_traceback(limit=12)
     try:
         if (hasattr(request, 'path') and
             hasattr(request, 'ip') and
             hasattr(request, 'user_agent')):
             comment = '/*\n%s\n%s\n%s\n*/' % (
                 tb or "", 
-                filters._force_utf8(sanitize(request.fullpath)),
+                sanitize(request.fullpath),
                 sanitize(request.ip))
             return select.prefix_with(comment)
     except UnicodeDecodeError:
@@ -488,14 +544,10 @@ def db2py(val, kind):
 
     return val
 
-#TODO i don't need type_id
-def set_data(table, type_id, thing_id, **vals):
-    s = sa.select([table.c.key], sa.and_(table.c.thing_id == thing_id))
 
+def update_data(table, thing_id, **vals):
     transactions.add_engine(table.bind)
-    keys = [x.key for x in s.execute().fetchall()]
 
-    i = table.insert(values = dict(thing_id = thing_id))
     u = table.update(sa.and_(table.c.thing_id == thing_id,
                              table.c.key == sa.bindparam('_key')))
     d = table.delete(sa.and_(table.c.thing_id == thing_id,
@@ -509,23 +561,32 @@ def set_data(table, type_id, thing_id, **vals):
             val = [py2db(v, return_kind=False) for v in val]
             kind = 'num'
 
-            #TODO one update?
-            if key in keys:
-                d.execute(_key = key)
+            d.execute(_key = key)
             for v in val:
                 inserts.append({'key':key, 'value':v, 'kind': kind})
         else:
             val, kind = py2db(val, return_kind=True)
 
-            #TODO one update?
-            if key in keys:
-                u.execute(_key = key, value = val, kind = kind)
-            else:
+            uresult = u.execute(_key = key, value = val, kind = kind)
+            if not uresult.rowcount:
                 inserts.append({'key':key, 'value':val, 'kind': kind})
-
 
     #do one insert
     if inserts:
+        i = table.insert(values = dict(thing_id = thing_id))
+        i.execute(*inserts)
+
+
+def create_data(table, thing_id, **vals):
+    transactions.add_engine(table.bind)
+
+    inserts = []
+    for key, val in vals.iteritems():
+        val, kind = py2db(val, return_kind=True)
+        inserts.append(dict(key=key, value=val, kind=kind))
+
+    if inserts:
+        i = table.insert(values=dict(thing_id=thing_id))
         i.execute(*inserts)
 
 
@@ -548,9 +609,6 @@ def get_data(table, thing_id):
             stor[row.key] = val
 
     return res
-
-
-
 
 def incr_data_prop(table, type_id, thing_id, prop, amount):
     t = table
@@ -596,9 +654,13 @@ def get_data_blah(table, thing_id):
 
     return res
 
-def set_thing_data(type_id, thing_id, **vals):
+def set_thing_data(type_id, thing_id, brand_new_thing, **vals):
     table = get_thing_table(type_id, action = 'write')[1]
-    return set_data(table, type_id, thing_id, **vals)
+
+    if brand_new_thing:
+        return create_data(table, thing_id, **vals)
+    else:
+        return update_data(table, thing_id, **vals)
 
 def incr_thing_data(type_id, thing_id, prop, amount):
     table = get_thing_table(type_id, action = 'write')[1]
@@ -631,9 +693,13 @@ def get_thing(type_id, thing_id):
             res[row.thing_id] = stor
     return res
 
-def set_rel_data(rel_type_id, thing_id, **vals):
+def set_rel_data(rel_type_id, thing_id, brand_new_thing, **vals):
     table = get_rel_table(rel_type_id, action = 'write')[3]
-    return set_data(table, rel_type_id, thing_id, **vals)
+
+    if brand_new_thing:
+        return create_data(table, thing_id, **vals)
+    else:
+        return update_data(table, thing_id, **vals)
 
 def incr_rel_data(rel_type_id, thing_id, prop, amount):
     table = get_rel_table(rel_type_id, action = 'write')[3]
@@ -676,6 +742,8 @@ def sa_op(op):
         return sa.or_(*[sa_op(o) for o in op.ops])
     elif isinstance(op, operators.and_):
         return sa.and_(*[sa_op(o) for o in op.ops])
+    elif isinstance(op, operators.not_):
+        return sa.not_(*[sa_op(o) for o in op.ops])
 
     #else, assume op is an instance of op
     if isinstance(op, operators.eq):
@@ -690,6 +758,8 @@ def sa_op(op):
         fn = lambda x,y: x >= y
     elif isinstance(op, operators.lte):
         fn = lambda x,y: x <= y
+    elif isinstance(op, operators.in_):
+        return sa.or_(op.lval.in_(op.rval))
 
     rval = tup(op.rval)
 

@@ -11,14 +11,14 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
 
 from r2.lib.db.tdb_sql import make_metadata, index_str, create_table
 
@@ -312,14 +312,14 @@ def process_google_transaction(trans_id):
             pennies = int(float(auth.find("order-total").contents[0])*100)
             if is_creddits:
                 secret = "cr_"
-                if pennies >= 2999:
-                    days = 12 * 31 * int(pennies / 2999)
+                if pennies >= g.gold_year_price.pennies:
+                    days = 12 * 31 * int(pennies / g.gold_year_price.pennies)
                 else:
-                    days = 31 * int(pennies / 399)
-            elif pennies == 2999:
+                    days = 31 * int(pennies / g.gold_month_price.pennies)
+            elif pennies == g.gold_year_price.pennies:
                 secret = "ys_"
                 days = 366
-            elif pennies == 399:
+            elif pennies == g.gold_month_price.pennies:
                 secret = "m_"
                 days = 31
             else:
@@ -362,3 +362,15 @@ def process_uncharged():
         if trans_id.startswith('g'):
             trans_id = trans_id[1:]
             process_google_transaction(trans_id)
+
+
+def retrieve_gold_transaction(transaction_id):
+    s = sa.select([gold_table], gold_table.c.trans_id == transaction_id)
+    res = s.execute().fetchall()
+    if res:
+        return res[0]   # single row per transaction_id
+
+
+def update_gold_transaction(transaction_id, status):
+    rp = gold_table.update(gold_table.c.trans_id == str(transaction_id),
+                           values={gold_table.c.status: status}).execute()

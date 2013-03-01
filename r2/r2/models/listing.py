@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from account import *
 from link import *
 from vote import *
@@ -30,6 +31,7 @@ from r2.lib import utils
 from r2.lib.db import operators
 from r2.lib.cache import sgm
 
+from collections import namedtuple
 from copy import deepcopy, copy
 
 class Listing(object):
@@ -44,13 +46,17 @@ class Listing(object):
         self.prev_link = True
         self.next = None
         self.prev = None
-        self.max_num = 1
+        self._max_num = 1
         self.vote_hash_type = vote_hash_type
 
     @property
     def max_score(self):
         scores = [x.score for x in self.things if hasattr(x, 'score')]
         return max(scores) if scores else 0
+
+    @property
+    def max_num(self):
+        return self._max_num
 
     def get_items(self, *a, **kw):
         """Wrapper around builder's get_items that caches the rendering."""
@@ -66,7 +72,7 @@ class Listing(object):
     def listing(self):
         self.things, prev, next, bcount, acount = self.get_items()
 
-        self.max_num = max(acount, bcount)
+        self._max_num = max(acount, bcount)
         self.after = None
         self.before = None
 
@@ -93,6 +99,8 @@ class TableListing(Listing): pass
 
 class ModActionListing(TableListing): pass
 
+class WikiRevisionListing(TableListing): pass
+
 class LinkListing(Listing):
     def __init__(self, *a, **kw):
         Listing.__init__(self, *a, **kw)
@@ -117,29 +125,66 @@ class NestedListing(Listing):
         #make into a tree thing
         return Wrapped(self)
 
+SpotlightTuple = namedtuple('SpotlightTuple',
+                            ['link', 'is_promo', 'campaign', 'weight'])
+
 class SpotlightListing(Listing):
     # class used in Javascript to manage these objects
     _js_cls = "OrganicListing"
 
     def __init__(self, *a, **kw):
-        kw['vote_hash_type'] = kw.get('vote_hash_type', 'organic')
-        Listing.__init__(self, *a, **kw)
+        self.vote_hash_type = kw.get('vote_hash_type', 'organic')
         self.nextprev   = False
         self.show_nums  = True
-        self._max_num   = kw.get('max_num', 0)
-        self._max_score = kw.get('max_score', 0)
-        self.spotlight_links  = kw.get('spotlight_links', [])
-        self.visible_link = kw.get('visible_link', '')
+        self._parent_max_num   = kw.get('max_num', 0)
+        self._parent_max_score = kw.get('max_score', 0)
+        self.interestbar = kw.get('interestbar')
+        self.interestbar_prob = kw.get('interestbar_prob', 0.)
+        self.promotion_prob = kw.get('promotion_prob', 0.5)
 
-    @property
-    def max_score(self):
-        return self._max_score
+        promoted_links = kw.get('promoted_links', [])
+        organic_links = kw.get('organic_links', [])
+
+        self.links = []
+        for l in organic_links:
+            self.links.append(
+                SpotlightTuple(
+                    link=l._fullname,
+                    is_promo=False,
+                    campaign=None,
+                    weight=None,
+                )
+            )
+
+        total = sum(float(l.weight) for l in promoted_links)
+        for l in promoted_links:
+            link = l._fullname if isinstance(l, Wrapped) else l.link
+            self.links.append(
+                SpotlightTuple(
+                    link=link,
+                    is_promo=True,
+                    campaign=l.campaign,
+                    weight=l.weight / total,
+                )
+            )
+
+        self.things = organic_links
+        self.things.extend(l for l in promoted_links
+                           if isinstance(l, Wrapped))
+
+
+    def get_items(self):
+        from r2.lib.template_helpers import replace_render
+        things = self.things
+        for t in things:
+            if not hasattr(t, "render_replaced"):
+                t.render = replace_render(self, t, t.render)
+                t.render_replaced = True
+        return things, None, None, 0, 0
 
     def listing(self):
         res = Listing.listing(self)
-        # override score fields
-        res.max_num = self._max_num
-        res.max_score = self._max_score
         for t in res.things:
             t.num = ""
-        return res
+        self.lookup = {t._fullname: t for t in res.things}
+        return Wrapped(self)

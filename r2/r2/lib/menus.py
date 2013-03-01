@@ -10,20 +10,21 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 from wrapped import CachedTemplate, Styled
 from pylons import c, request, g
 from utils import  query_string, timeago
 from strings import StringHandler, plurals
 from r2.lib.db import operators
-from r2.lib.indextank import sorts as indextank_sorts
+import r2.lib.search as search
 from r2.lib.filters import _force_unicode
 from pylons.i18n import _
 
@@ -41,17 +42,6 @@ class MenuHandler(StringHandler):
         except KeyError:
             return getattr(plurals, attr)
 
-# selected menu styles, primarily used on the main nav bar
-menu_selected=StringHandler(hot          = _("what's hot"),
-                            new          = _("what's new"),
-                            top          = _("top scoring"),
-                            controversial= _("most controversial"),
-                            rss= _("rss feed"),
-                            saved        = _("saved"),
-                            recommended  = _("recommended"),
-                            promote      = _('promote'),
-                            )
-
 # translation strings for every menu on the site
 menu =   MenuHandler(hot          = _('hot'),
                      new          = _('new'),
@@ -64,6 +54,7 @@ menu =   MenuHandler(hot          = _('hot'),
                      controversial  = _('controversial'),
 		     rss= _("rss feed"),
                      confidence   = _('best'),
+                     random       = _('random'),
                      saved        = _('saved {toolbar}'),
                      recommended  = _('recommended'),
                      rising       = _('rising'), 
@@ -82,17 +73,14 @@ menu =   MenuHandler(hot          = _('hot'),
                      autobanned   = _("autobanned"),
 
                      # reddit header strings
-                     adminon      = _("turn admin on"),
-                     adminoff     = _("turn admin off"), 
                      prefs        = _("preferences"), 
                      submit       = _("submit"),
-                     help         = _("help"),
+                     wiki         = _("wiki"),
                      blog         = _("blog"),
                      logout       = _("logout"),
                      
                      #reddit footer strings
                      feedback     = _("contact us"),
-                     socialite    = _("firefox extension"),
                      buttons      = _("buttons"),
                      widget       = _("widget"), 
                      code         = _("source code"),
@@ -101,13 +89,17 @@ menu =   MenuHandler(hot          = _('hot'),
                      ad_inq       = _("advertise"),
                      gold         = _('reddit gold'),
                      reddits      = _('subreddits'),
+                     team         = _('team'),
+                     rules        = _('rules'),
 
                      #preferences
                      options      = _('options'),
+                     apps         = _("apps"),
                      feeds        = _("RSS feeds"),
                      friends      = _("friends"),
                      update       = _("password/email"),
                      delete       = _("delete"),
+                     otp          = _("two-factor authentication"),
 
                      # messages
                      compose      = _("compose"),
@@ -120,6 +112,7 @@ menu =   MenuHandler(hot          = _('hot'),
                      details      = _("details"),
                      duplicates   = _("other discussions (%(num)s)"),
                      traffic      = _("traffic stats"),
+                     stylesheet   = _("stylesheet"),
 
                      # reddits
                      home         = _("home"),
@@ -135,6 +128,13 @@ menu =   MenuHandler(hot          = _('hot'),
                      log          = _("moderation log"),
                      modqueue     = _("moderation queue"),
                      trials       = _("view and judge submitted links"),
+                     unmoderated  = _("unmoderated links"),
+                     
+                     wikibanned        = _("ban wiki contributors"),
+                     wikicontributors  = _("add wiki contributors"),
+                     
+                     wikirecentrevisions = _("recent wiki revisions"),
+                     wikipageslist = _("wiki page list"),
 
                      popular      = _("popular"),
                      create       = _("create"),
@@ -144,7 +144,6 @@ menu =   MenuHandler(hot          = _('hot'),
                      errors       = _("errors"),
                      awards       = _("awards"),
                      ads          = _("ads"),
-                     usage        = _("usage"),
                      promoted     = _("promoted"),
                      reporters    = _("reporters"),
                      reports      = _("reported links"),
@@ -167,10 +166,15 @@ menu =   MenuHandler(hot          = _('hot'),
                      future_promos  = _('unseen'),
                      roadblock      = _('roadblock'),
                      graph          = _('analytics'),
+                     admin_graph = _('admin analytics'),
                      live_promos    = _('live'),
                      unpaid_promos  = _('unpaid'),
                      pending_promos = _('pending'),
                      rejected_promos = _('rejected'),
+
+                     sitewide = _('sitewide'),
+                     languages = _('languages'),
+                     adverts = _('adverts'),
 
                      whitelist = _("whitelist")
                      )
@@ -350,13 +354,13 @@ class SubredditButton(NavButton):
     # TRANSLATORS: This refers to the user's front page
                       Frontpage: _("front")}
 
-    def __init__(self, sr):
+    def __init__(self, sr, **kw):
         self.path = sr.path
         name = self.name_overrides.get(sr, sr.name)
         if self.path=='/':
             self.path='/hot'
         NavButton.__init__(self, name, sr.path, False,
-                           isselected = (c.site == sr))
+                           isselected = (c.site == sr), **kw)
 
     def build(self, base_path = ''):
         pass
@@ -379,13 +383,6 @@ class NamedButton(NavButton):
         menutext = menu[self.name] % fmt_args
         NavButton.__init__(self, menutext, name if dest is None else dest,
                            sr_path = sr_path, nocname=nocname, **kw)
-
-    def selected_title(self):
-        """Overrides selected_title to use menu_selected dictionary"""
-        try:
-            return menu_selected[self.name]
-        except KeyError:
-            return NavButton.selected_title(self)
 
 class JsButton(NavButton):
     """A button which fires a JS event and thus has no path and cannot
@@ -422,14 +419,20 @@ class SimplePostMenu(NavMenu):
     of NavButtons contained in this Menu instance.  The goal here is
     to have a menu object which 'out of the box' is self validating."""
     options   = []
+    hidden_options = []
     name      = ''
     title     = ''
     default = None
     type = 'lightdrop'
 
     def __init__(self, **kw):
-        buttons = [NavButton(self.make_title(n), n, opt=self.name, style='post')
-                   for n in self.options]
+        buttons = []
+        for name in self.options:
+            css_class = 'hidden' if name in self.hidden_options else ''
+            button = NavButton(self.make_title(name), name, opt=self.name,
+                               style='post', css_class=css_class)
+            buttons.append(button)
+
         kw['default'] = kw.get('default', self.default)
         kw['base_path'] = kw.get('base_path') or request.path
         NavMenu.__init__(self, buttons, type = self.type, **kw)
@@ -466,6 +469,8 @@ class SortMenu(SimplePostMenu):
             return operators.desc('_controversy')
         elif sort == 'confidence':
             return operators.desc('_confidence')
+        elif sort == 'random':
+            return operators.shuffled('_confidence')
 
 class ProfileSortMenu(SortMenu):
     default   = 'new'
@@ -474,13 +479,15 @@ class ProfileSortMenu(SortMenu):
 class CommentSortMenu(SortMenu):
     """Sort menu for comments pages"""
     default   = 'confidence'
-    options   = ('hot', 'new', 'controversial', 'top', 'old', 'confidence')
+    options   = ('confidence', 'top', 'new', 'hot', 'controversial', 'old',
+                 'random')
+    hidden_options = ('random',)
     use_post  = True
 
 class SearchSortMenu(SortMenu):
     """Sort menu for search pages."""
     default   = 'relevance'
-    mapping   = indextank_sorts
+    mapping   = search.sorts
     options   = mapping.keys()
 
     @classmethod
@@ -491,23 +498,6 @@ class RecSortMenu(SortMenu):
     """Sort menu for recommendation page"""
     default   = 'new'
     options   = ('hot', 'new', 'top', 'controversial', 'relevance')
-
-class NewMenu(SimplePostMenu):
-    name      = 'sort'
-    default   = 'new'
-    options   = ('new', 'rising')
-    type = 'flatlist'
-    use_post  = True
-
-    def __init__(self, **kw):
-        kw['title'] = ""
-        SimplePostMenu.__init__(self, **kw)
-
-    @classmethod
-    def operator(self, sort):
-        if sort == 'new':
-            return operators.desc('_date')
-        
 
 class KindMenu(SimplePostMenu):
     name    = 'kind'

@@ -11,14 +11,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
+
 """
 One-time use functions to migrate from one reddit-version to another
 """
@@ -222,53 +223,6 @@ def pushup_permacache(verbosity=1000):
         print 'Done %d: %r' % (done, keys[-1])
         populate(keys)
 
-# alter table bids DROP constraint bids_pkey;
-# alter table bids add column campaign integer;
-# update bids set campaign = 0;
-# alter table bids ADD primary key (transaction, campaign);
-def promote_v2():
-    # alter table bids add column campaign integer;
-    # update bids set campaign = 0; 
-    from r2.models import Link, NotFound, PromoteDates, Bid
-    from datetime import datetime
-    from pylons import g
-    for p in PromoteDates.query():
-        try:
-            l = Link._by_fullname(p.thing_name,
-                                  data = True, return_dict = False)
-            if not l:
-                raise NotFound, p.thing_name
-
-            # update the promote status
-            l.promoted = True
-            l.promote_status = getattr(l, "promote_status", STATUS.unseen)
-            l._date = datetime(*(list(p.start_date.timetuple()[:7]) + [g.tz]))
-            set_status(l, l.promote_status)
-
-            # add new campaign
-            print (l, (p.start_date, p.end_date), p.bid, None)
-            if not p.bid:
-                print "no bid? ", l
-                p.bid = 20
-            new_campaign(l, (p.start_date, p.end_date), p.bid, None)
-            print "updated: %s (%s)" % (l, l._date)
-
-        except NotFound:
-            print "NotFound: %s" % p.thing_name
-
-    print "updating campaigns"
-    for b in Bid.query():
-        l = Link._byID(int(b.thing_id))
-        print "updating: ", l
-        campaigns = getattr(l, "campaigns", {}).copy()
-        indx = b.campaign
-        if indx in campaigns:
-            sd, ed, bid, sr, trans_id = campaigns[indx]
-            campaigns[indx] = sd, ed, bid, sr, b.transaction
-            l.campaigns = campaigns
-            l._commit()
-        else:
-            print "no campaign information: ", l
 
 def port_cassavotes():
     from r2.models import Vote, Account, Link, Comment

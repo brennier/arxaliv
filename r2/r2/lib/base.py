@@ -11,47 +11,27 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
 # the specific language governing rights and limitations under the License.
 #
-# The Original Code is Reddit.
+# The Original Code is reddit.
 #
-# The Original Developer is the Initial Developer.  The Initial Developer of the
-# Original Code is CondeNet, Inc.
+# The Original Developer is the Initial Developer.  The Initial Developer of
+# the Original Code is reddit Inc.
 #
-# All portions of the code written by CondeNet are Copyright (c) 2006-2010
-# CondeNet, Inc. All Rights Reserved.
-################################################################################
+# All portions of the code written by reddit are Copyright (c) 2006-2012 reddit
+# Inc. All Rights Reserved.
+###############################################################################
 
-import _pylibmc
-import pycassa.pool
-import sqlalchemy.exc
-
-from pylons import Response, c, g, request, session, config
-from pylons.controllers import WSGIController, Controller
-from pylons.controllers.util import abort
+from pylons import c, g, request, session, config, response
+from pylons.controllers import WSGIController
 from pylons.i18n import N_, _, ungettext, get_lang
-import r2.lib.helpers as h
-from r2.lib.utils import to_js
+from webob.exc import HTTPException, status_map
 from r2.lib.filters import spaceCompress, _force_unicode
 from r2.lib.template_helpers import get_domain
 from utils import storify, string2js, read_http_date
-from r2.lib.log import log_exception
-import r2.lib.db.thing
-import r2.lib.lock
 
 import re, hashlib
 from urllib import quote
 import urllib2
 import sys
-
-
-OPERATIONAL_EXCEPTIONS = (_pylibmc.MemcachedError,
-                          r2.lib.db.thing.NotFound,
-                          r2.lib.lock.TimeoutExpired,
-                          sqlalchemy.exc.OperationalError,
-                          sqlalchemy.exc.IntegrityError,
-                          pycassa.pool.AllServersUnavailable,
-                          pycassa.pool.NoConnectionAvailable,
-                          pycassa.pool.MaximumRetryException,
-                         )
 
 
 #TODO hack
@@ -64,6 +44,25 @@ def is_local_address(ip):
     # TODO: support the /20 and /24 private networks? make this configurable?
     return ip.startswith('10.')
 
+def abort(code_or_exception=None, detail="", headers=None, comment=None,
+          **kwargs):
+    """Raise an HTTPException and save it in environ for use by error pages."""
+    # Pylons 0.9.6 makes it really hard to get your raised HTTPException,
+    # so this helper implements it manually using a familiar syntax.
+    # FIXME: when we upgrade Pylons, we can replace this with raise
+    #        and access environ['pylons.controller.exception']
+    # NOTE: when we say "upgrade Pylons" we mean to 0.10+
+    if isinstance(code_or_exception, HTTPException):
+        exc = code_or_exception
+    else:
+        if type(code_or_exception) is type and issubclass(code_or_exception,
+                                                          HTTPException):
+            exc_cls = code_or_exception
+        else:
+            exc_cls = status_map[code_or_exception]
+        exc = exc_cls(detail, headers, comment, **kwargs)
+    request.environ['r2.controller.exception'] = exc
+    raise exc
 
 class BaseController(WSGIController):
     def try_pagecache(self):
@@ -100,7 +99,6 @@ class BaseController(WSGIController):
         request.get = storify(request.GET)
         request.post = storify(request.POST)
         request.referer = environ.get('HTTP_REFERER')
-        request.path = environ.get('PATH_INFO')
         request.user_agent = environ.get('HTTP_USER_AGENT')
         request.fullpath = environ.get('FULLPATH', request.path)
         request.port = environ.get('request_port')
@@ -125,19 +123,8 @@ class BaseController(WSGIController):
 
             request.environ['pylons.routes_dict']['action_name'] = action
             request.environ['pylons.routes_dict']['action'] = handler_name
-                    
-        c.response = Response()
-        try:
-            res = WSGIController.__call__(self, environ, start_response)
-        except Exception as e:
-            if g.exception_logging and not isinstance(e, OPERATIONAL_EXCEPTIONS):
-                try:
-                    log_exception(e, *sys.exc_info())
-                except Exception as f:
-                    print "log_exception() freaked out: %r" % f
-                    print "sorry for breaking the stack trace:"
-            raise
-        return res
+
+        return WSGIController.__call__(self, environ, start_response)
 
     def pre(self): pass
     def post(self): pass
@@ -177,8 +164,8 @@ class BaseController(WSGIController):
 
         # unparse and encode it un utf8
         rv = _force_unicode(u.unparse()).encode('utf8')
-        if any(ch.isspace() for ch in rv):
-            raise ValueError("Space characters in redirect URL: [%r]" % rv)
+        if "\n" in rv or "\r" in rv:
+            abort(400)
         return rv
 
 
@@ -197,7 +184,7 @@ class BaseController(WSGIController):
 
         path = add_sr(cls.format_output_url(form_path) +
                       query_string(params))
-        abort(302, path)
+        abort(302, location=path)
 
     @classmethod
     def redirect(cls, dest, code = 302):
@@ -206,14 +193,8 @@ class BaseController(WSGIController):
         sends the user to that location with the provided HTTP code.
         """
         dest = cls.format_output_url(dest or "/")
-        c.response.headers['Location'] = dest
-        c.response.status_code = code
-        return c.response
-
-    def sendjs(self,js, callback="document.write", escape=True):
-        c.response.headers['Content-Type'] = 'text/javascript'
-        c.response.content = to_js(js, callback, escape)
-        return c.response
+        response.status_int = code
+        response.headers['Location'] = dest
 
 class EmbedHandler(urllib2.BaseHandler, urllib2.HTTPHandler,
                    urllib2.HTTPErrorProcessor, urllib2.HTTPDefaultErrorHandler):

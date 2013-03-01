@@ -10,7 +10,9 @@ function update_bid(elem) {
              Date.parse(form.find('*[name="startdate"]').val())) / (86400*1000));
     ndays = Math.round(ndays);
 
-    var minimum_daily_bid = (is_targeted ? 30 : 20);
+    // min bid is slightly higher for targeted promos
+    var minimum_daily_bid = is_targeted ? $("#bid").data("min_daily_bid") * 1.5 : 
+                                          $("#bid").data("min_daily_bid");
     $(".minimum-spend").removeClass("error");
     if (bid < ndays * minimum_daily_bid) {
         $(".bid-info").addClass("error");
@@ -20,12 +22,12 @@ function update_bid(elem) {
             $("#no_targeting_minimum").addClass("error");
         }
 
-        form.find('button[name="create"], button[name="edit"]')
+        form.find('button[name="create"], button[name="save"]')
             .prop("disabled", "disabled")
             .addClass("disabled");
     } else {
         $(".bid-info").removeClass("error");
-        form.find('button[name="create"], button[name="edit"]')
+        form.find('button[name="create"], button[name="save"]')
             .removeProp("disabled")
             .removeClass("disabled");
     }
@@ -84,6 +86,18 @@ function attach_calendar(where, min_date_src, max_date_src, callback, min_date_o
      });
 }
 
+function check_enddate(startdate, enddate) {
+  var startdate = $(startdate)
+  var enddate = $(enddate);
+  if(dateFromInput(startdate) >= dateFromInput(enddate)) {
+    var newd = new Date();
+    newd.setTime(startdate.datepicker('getDate').getTime() + 86400*1000);
+    enddate.val((newd.getMonth()+1) + "/" +
+      newd.getDate() + "/" + newd.getFullYear());
+  }
+  $("#datepicker-" + enddate.attr("id")).datepicker("destroy");
+}
+
 function targeting_on(elem) {
     $(elem).parents(".campaign").find(".targeting")
         .find('*[name="sr"]').prop("disabled", "").end().slideDown();
@@ -101,25 +115,26 @@ function targeting_off(elem) {
 (function($) {
 
 function get_flag_class(flags) {
-    var css_class = "";
+    var css_class = "campaign-row";
     if(flags.free) {
         css_class += " free";
+    }
+    if(flags.live) {
+        css_class += " live";
     }
     if(flags.complete) {
         css_class += " complete";
     }
-    else {
-        if(flags.sponsor) {
-            css_class += " sponsor";
-        }
-        if(flags.paid) {
+    else if (flags.paid) {
             css_class += " paid";
-        }
+    }
+    if (flags.sponsor) {
+        css_class += " sponsor";
     }
     return css_class
 }
 
-$.new_campaign = function(indx, start_date, end_date, duration, 
+$.new_campaign = function(campaign_id36, start_date, end_date, duration, 
                           bid, targeting, flags) {
     cancel_edit(function() {
       var data =('<input type="hidden" name="startdate" value="' + 
@@ -129,10 +144,14 @@ $.new_campaign = function(indx, start_date, end_date, duration,
                  '<input type="hidden" name="bid" value="' + bid + '"/>' +
                  '<input type="hidden" name="targeting" value="' + 
                  (targeting || '') + '"/>' +
-                 '<input type="hidden" name="indx" value="' + indx + '"/>');
+                 '<input type="hidden" name="campaign_id36" value="' + campaign_id36 + '"/>');
       if (flags && flags.pay_url) {
           data += ("<input type='hidden' name='pay_url' value='" + 
                    flags.pay_url + "'/>");
+      }
+      if (flags && flags.view_live_url) {
+          data += ("<input type='hidden' name='view_live_url' value='" + 
+                   flags.view_live_url + "'/>");
       }
       var row = [start_date, end_date, duration, "$" + bid, targeting, data];
       $(".existing-campaigns .error").hide();
@@ -140,16 +159,17 @@ $.new_campaign = function(indx, start_date, end_date, duration,
       $(".existing-campaigns table").show()
       .insert_table_rows([{"id": "", "css_class": css_class, 
                            "cells": row}], -1);
+      check_number_of_campaigns();
       $.set_up_campaigns()
         });
    return $;
 };
 
-$.update_campaign = function(indx, start_date, end_date, 
+$.update_campaign = function(campaign_id36, start_date, end_date, 
                              duration, bid, targeting, flags) {
     cancel_edit(function() {
-            $('.existing-campaigns input[name="indx"]')
-                .filter('*[value="' + (indx || '0') + '"]')
+            $('.existing-campaigns input[name="campaign_id36"]')
+                .filter('*[value="' + (campaign_id36 || '0') + '"]')
                 .parents("tr").removeClass()
             .addClass(get_flag_class(flags))
                 .children(":first").html(start_date)
@@ -173,12 +193,18 @@ $.set_up_campaigns = function() {
     var pay = "<button>pay</button>";
     var free = "<button>free</button>";
     var repay = "<button>change</button>";
+    var view = "<button>view live</button>";
     $(".existing-campaigns tr").each(function() {
             var tr = $(this);
             var td = $(this).find("td:last");
             var bid_td = $(this).find("td:first").next().next().next()
                 .addClass("bid");
+            var target_td = $(this).find("td:nth-child(5)")
             if(td.length && ! td.children("button, span").length ) {
+                if(tr.hasClass("live")) {
+                    $(target_td).append($(view).addClass("view")
+                            .click(function() { view_campaign(tr) }));
+                }
                 /* once paid, we shouldn't muck around with the campaign */
                 if(!tr.hasClass("complete")) {
                     if (tr.hasClass("sponsor") && !tr.hasClass("free")) {
@@ -205,6 +231,12 @@ $.set_up_campaigns = function() {
                 else {
                     $(td).append("<span class='info'>complete/live</span>");
                     $(bid_td).addClass("paid")
+                    /* sponsors can always edit */
+                    if (tr.hasClass("sponsor")) {
+                        var e = $(edit).addClass("edit fancybutton")
+                            .click(function() { edit_campaign(tr); });
+                        $(td).append(e);
+                    }
                 }
             }
         });
@@ -220,10 +252,8 @@ function detach_campaign_form() {
             $(this).datepicker("destroy").siblings().unbind();
         });
 
-    /* clone and remove original */
-    var orig = $("#campaign");
-    var campaign = orig.clone(true);
-    orig.remove();
+    /* detach and return */
+    var campaign = $("#campaign").detach();
     return campaign;
 }
 
@@ -258,11 +288,12 @@ function cancel_edit(callback) {
 }
 
 function del_campaign(elem) {
-    var indx = $(elem).find('*[name="indx"]').val();
+    var campaign_id36 = $(elem).find('*[name="campaign_id36"]').val();
     var link_id = $("#campaign").find('*[name="link_id"]').val();
-    $.request("delete_campaign", {"indx": indx, "link_id": link_id},
+    $.request("delete_campaign", {"campaign_id36": campaign_id36,
+                                  "link_id": link_id},
               null, true, "json", false);
-    $(elem).children(":first").delete_table_row();
+    $(elem).children(":first").delete_table_row(check_number_of_campaigns);
 }
 
 
@@ -286,7 +317,7 @@ function edit_campaign(elem) {
                 .prev().fadeOut(function() { 
                         var data_tr = $(this);
                         var c = $("#campaign");
-                        $.map(['startdate', 'enddate', 'bid', 'indx'], 
+                        $.map(['startdate', 'enddate', 'bid', 'campaign_id36'], 
                               function(i) {
                                   i = '*[name="' + i + '"]';
                                   c.find(i).val(data_tr.find(i).val());
@@ -310,7 +341,7 @@ function edit_campaign(elem) {
                         /* attach the dates to the date widgets */
                         init_startdate();
                         init_enddate();
-                        c.find('button[name="edit"]').show().end()
+                        c.find('button[name="save"]').show().end()
                             .find('button[name="create"]').hide().end();
                         update_bid('*[name="bid"]');
                         c.fadeIn();
@@ -320,14 +351,29 @@ function edit_campaign(elem) {
     }
 }
 
+function check_number_of_campaigns(){
+    if ($(".campaign-row").length >= $(".existing-campaigns").data("max-campaigns")){
+      $(".error.TOO_MANY_CAMPAIGNS").fadeIn();
+      $("button.new-campaign").attr("disabled", "disabled");
+      return true;
+    } else {
+      $(".error.TOO_MANY_CAMPAIGNS").fadeOut();
+      $("button.new-campaign").removeAttr("disabled");
+      return false;
+    }
+}
+
 function create_campaign(elem) {
+    if (check_number_of_campaigns()){
+        return;
+    }
     cancel_edit(function() {;
             init_startdate();
             init_enddate();
             $("#campaign")
                 .find('button[name="edit"]').hide().end()
                 .find('button[name="create"]').show().end()
-                .find('input[name="indx"]').val('').end()
+                .find('input[name="campaign"]').val('').end()
                 .find('input[name="sr"]').val('').end()
                 .find('input[name="targeting"][value="none"]')
                                 .prop("checked", "checked").end()
@@ -339,9 +385,9 @@ function create_campaign(elem) {
 }
 
 function free_campaign(elem) {
-    var indx = $(elem).find('*[name="indx"]').val();
+    var campaign_id36 = $(elem).find('*[name="campaign_id36"]').val();
     var link_id = $("#campaign").find('*[name="link_id"]').val();
-    $.request("freebie", {"indx": indx, "link_id": link_id},
+    $.request("freebie", {"campaign_id36": campaign_id36, "link_id": link_id},
               null, true, "json", false);
     $(elem).find(".free").fadeOut();
     return false; 
@@ -349,4 +395,34 @@ function free_campaign(elem) {
 
 function pay_campaign(elem) {
     $.redirect($(elem).find('input[name="pay_url"]').val());
+}
+
+function view_campaign(elem) {
+    $.redirect($(elem).find('input[name="view_live_url"]').val());
+}
+
+// writes rows into inventory table when subreddit selector changes
+function update_inventory_table() {
+   var sr = $('#targeting').attr('checked') ? $('#sr-autocomplete').val() : ' reddit.com';
+   $.ajax({
+       url: '/promoted/inventory/' + sr,
+       type: 'GET',
+       dataType: 'json',
+       // on success, update title to show subreddit name and fill table rows
+       success: function(data) { // {'sr':'funny', 'dates':[...], 'imps':[...]}
+           var sr_name = (data['sr'] == ' reddit.com') ? 'front page' : data['sr'];
+           $('#inventory-title > span').text('available ' + sr_name + ' impressions'); // FIXME: i18n
+           $('#inventory').empty();
+           $('#inventory').append('<tr><th>date</th><th>imps</th><th></th></tr>');
+           $.each(data['imps'], function(i) {
+               var w = Math.round(50. * data['imps'][i] / data['max_imps']);
+               var row = ['<tr>',
+                          '<th>' + data['dates'][i] + '</th>',
+                          '<td>' + data['imps'][i] + '</td>',
+                          '<td><div class="graph" style="width:' + w.toString() + 'px" /></td>',
+                          '</tr>'];
+               $('#inventory > tbody').append(row.join(''))
+           });
+       }   
+   }); 
 }
