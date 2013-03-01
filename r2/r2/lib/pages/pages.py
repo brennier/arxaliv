@@ -777,11 +777,21 @@ class PrefsPage(Reddit):
                 NavMenu(buttons, base_path = "/prefs", type="tabmenu")]
 
 class HomePage2(Templated):
-    create_reddit_box = True
-    submit_box        = True
-    searchbox         = True
-    show_sidebar      = True
-    loginbox          = False
+    create_reddit_box  = True
+    submit_box         = True
+    footer             = True
+    searchbox          = True
+    show_sidebar       = True
+    loginbox           = False
+    extension_handling = True
+    enable_login_cover = True
+    site_tracking      = True
+    show_infobar       = True
+    content_id         = None
+    css_class          = None
+    extra_page_classes = None
+    query_ext          = None
+    query_raw          = None
 
     def content(self):
         return self.content_stack((self.searchbar, self.nav_menu,
@@ -811,7 +821,7 @@ class HomePage2(Templated):
             if not c.user_is_loggedin or c.site.can_submit(c.user) or isinstance(c.site, FakeSubreddit):
                 kwargs["link"] = "/submit"
                 kwargs["sr_path"] = isinstance(c.site, DefaultSR) or not isinstance(c.site, FakeSubreddit),
-                kwargs["subtitles"] = [strings.submit_box_text]
+                kwargs["subtitles"] = ['..']
             else:
                 kwargs["disabled"] = True
                 if c.site.type == "archived":
@@ -828,10 +838,19 @@ class HomePage2(Templated):
                            subtitles = ['..for your research interests', '..for your own journal'],#rand_strings.get("create_reddit", 2),
                            show_cover = True, nocname=True))
 
-        subscribe_box = SubscriptionBox(make_multi=True)
+        srs = Subreddit.user_subreddits(c.user, ids=False, limit=None)
+        srs.sort(key=lambda sr: sr.name.lower())
+        subscribe_box = SubscriptionBox(srs,
+                                        multi_text=strings.subscribed_multi)
         num_reddits = len(subscribe_box.srs)
         ps.append(SideContentBox(_("your front page arxalivs (%s)") %
                                  num_reddits, [subscribe_box]))
+        #srs = Subreddit._byID(c.site.sr_ids, data=True,
+        #                      return_dict=False)
+        #subscribe_box = SubscriptionBox(make_multi=True)
+        #num_reddits = len(subscribe_box.srs)
+        #ps.append(SideContentBox(_("your front page arxalivs (%s)") %
+        #                         num_reddits, [subscribe_box]))
 
         if c.user.pref_clickgadget and c.recent_clicks:
             ps.append(SideContentBox(_("Recently viewed links"),

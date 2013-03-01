@@ -218,9 +218,11 @@ Physics
 </div>
 </div>
 
-<div class="side">
-${thing.rightbox()}
-</div>
+  %if thing.show_sidebar:
+    <div class="side">
+      ${thing.rightbox()}
+    </div>
+  %endif
 </div>
 
     <link href="https://s3.amazonaws.com/workwolf/css/bootstrap.min.css" rel="stylesheet">

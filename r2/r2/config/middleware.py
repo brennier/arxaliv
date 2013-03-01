@@ -180,7 +180,7 @@ class DomainMiddleware(object):
                     sr_redirect = sr_redirect + '.' + subdomain
                 else:
                     sr_redirect = subdomain
-                sub_domains.remove(subdomain)
+                subdomains.remove(subdomain)
 
         # if there was a subreddit subdomain, redirect
         if sr_redirect and environ.get("FULLPATH"):
