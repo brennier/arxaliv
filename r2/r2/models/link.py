@@ -61,6 +61,7 @@ class Link(Thing, Printable):
                      pending = False,
                      disable_comments = False,
                      multi_sr_id = [],
+                     arxivtrackback = False,
                      selftext = '',
                      noselfreply = False,
                      ip = '0.0.0.0',
