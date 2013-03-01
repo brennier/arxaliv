@@ -1,0 +1,221 @@
+<style>
+ul, ol {
+  margin: 0 0 0 0;
+}
+.infobar {
+  display:none
+}
+.dropdown-menu {
+  max-width: 350px
+}
+/*.btn-group:after {
+content: inherit
+}*/
+.btn-toolbar .btn-group .btn:first-child {
+top: 8px;
+margin: 2px;
+}
+.btn {
+margin: 2px;
+}
+.arxaliv {
+  font-size: 13px
+}
+</style>
+<!--<div class="page-header">
+<h1>Arxaliv &nbsp; <small>the living archive of research papers</small></h1>
+</div>-->
+
+<div class="arxaliv">
+<h3>If you want to read everything <small>(or you have already &nbsp;<a href="/arxalivs">customised</a>&nbsp; your subscription)</small></h3>
+
+
+<div class="btn-group" style="margin:10px">
+<a class="btn btn-large btn-info" href="/top/?sort=top&t=all">top postings</a>
+<a class="btn btn-large" href="/new">new postings</a>
+<a class="btn btn-large" href="/hot">popular postings</a>
+<a class="btn btn-large btn-gold" href="/arxalivs">view all categories</a>
+</div>
+<br/>
+
+<div class="row">
+<div class="span6">
+<h3>If you are more selective (arXiv physics)</h3>
+
+<div class="btn-toolbar" style="margin:10px">
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Astrophysics
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/astro_ph.CO">Cosmology and Extragalactic Astrophysics</a></li><li><a href="/r/astro_ph.EP">Earth and Planetary Astrophysics</a></li><li><a href="/r/astro_ph.GA">Galaxy Astrophysics</a></li><li><a href="/r/astro_ph.HE">High Energy Astrophysical Phenomena</a></li><li><a href="/r/astro_ph.IM">Instrumentation and Methods for Astrophysics</a></li><li><a href="/r/astro_ph.SR">Solar and Stellar Astrophysics</a></li>
+</ul>
+</div>
+
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Condensed Matter
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/cond_mat.dis_nn">Disordered Systems and Neural Networks</a></li><li><a href="/r/cond_mat.mtrl_sci">Materials Science</a></li><li><a href="/r/cond_mat.mes_hall">Mesoscale and Nanoscale Physics</a></li><li><a href="/r/cond_mat.other">Other Condensed Matter</a></li><li><a href="/r/cond_mat.quant_gas">Quantum Gases</a></li><li><a href="/r/cond_mat.soft">Soft Condensed Matter</a></li><li><a href="/r/cond_mat.stat_mech">Statistical Mechanics</a></li><li><a href="/r/cond_mat.str_el">Strongly Correlated Electrons</a></li><li><a href="/r/cond_mat.supr_con">Superconductivity</a></li>
+</ul>
+</div>
+
+
+<a class="btn" href="/r/gr_qc">General Relativity and Quantum Cosmology</a>
+
+<a class="btn" href="/r/hep_ex">High Energy Physics - Experiment</a>
+<a class="btn" href="/r/hep_lat">High Energy Physics - Lattice</a>
+<a class="btn" href="/r/hep_ph">High Energy Physics - Phenomenology</a>
+<a class="btn" href="/r/hep_th">High Energy Physics - Theory</a>
+
+<a class="btn" href="/r/math_ph">Mathematical Physics</a>
+<a class="btn" href="/r/nucl_ex">Nuclear Experiment</a>
+<a class="btn" href="/r/nucl_th">Nuclear Theory</a>
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Physics
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/physics.acc_ph/">Accelerator Physics</a></li><li><a href="/r/physics.ao_ph/">Atmospheric and Oceanic Physics</a></li><li><a href="/r/physics.atom_ph/">Atomic Physics</a></li><li><a href="/r/physics.atm_clus/">Atomic and Molecular Clusters</a></li><li><a href="/r/physics.bio_ph/">Biological Physics</a></li><li><a href="/r/physics.chem_ph/">Chemical Physics</a></li><li><a href="/r/physics.class_ph/">Classical Physics</a></li><li><a href="/r/physics.comp_ph/">Computational Physics</a></li><li><a href="/r/physics.data_an/">Data Analysis, Statistics and Probability</a></li><li><a href="/r/physics.flu_dyn/">Fluid Dynamics</a></li><li><a href="/r/physics.gen_ph/">General Physics</a></li><li><a href="/r/physics.geo_ph/">Geophysics</a></li><li><a href="/r/physics.hist_ph/">History and Philosophy of Physics</a></li><li><a href="/r/physics.ins_det/">Instrumentation and Detectors</a></li><li><a href="/r/physics.med_ph/">Medical Physics</a></li><li><a href="/r/physics.optics/">Optics</a></li><li><a href="/r/physics.ed_ph/">Physics Education</a></li><li><a href="/r/physics.soc_ph/">Physics and Society</a></li><li><a href="/r/physics.plasm_ph/">Plasma Physics</a></li><li><a href="/r/physics.pop_ph/">Popular Physics</a></li><li><a href="/r/physics.space_ph/">Space Physics</a></li>
+</ul>
+</div>
+
+<a class="btn" href="/r/quant_ph">Quantum Physics</a>
+</div>
+</div>
+
+<div class="span6">
+<h3>If you are more selective (arXiv non-physics)</h3>
+
+<div class="btn-toolbar" style="margin:10px">
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Mathematics
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/math.AG/">Algebraic Geometry</a></li><li><a href="/r/math.AT/">Algebraic Topology</a></li><li><a href="/r/math.AP/">Analysis of PDEs</a></li><li><a href="/r/math.CT/">Category Theory</a></li><li><a href="/r/math.CA/">Classical Analysis and ODEs</a></li><li><a href="/r/math.CO/">Combinatorics</a></li><li><a href="/r/math.AC/">Commutative Algebra</a></li><li><a href="/r/math.CV/">Complex Variables</a></li><li><a href="/r/math.DG/">Differential Geometry</a></li><li><a href="/r/math.DS/">Dynamical Systems</a></li><li><a href="/r/math.FA/">Functional Analysis</a></li><li><a href="/r/math.GM/">General Mathematics</a></li><li><a href="/r/math.GN/">General Topology</a></li><li><a href="/r/math.GT/">Geometric Topology</a></li><li><a href="/r/math.GR/">Group Theory</a></li><li><a href="/r/math.HO/">History and Overview</a></li><li><a href="/r/math.IT/">Information Theory</a></li><li><a href="/r/math.KT/">K_Theory and Homology</a></li><li><a href="/r/math.LO/">Logic</a></li><li><a href="/r/math.MP/">Mathematical Physics</a></li><li><a href="/r/math.MG/">Metric Geometry</a></li><li><a href="/r/math.NT/">Number Theory</a></li><li><a href="/r/math.NA/">Numerical Analysis</a></li><li><a href="/r/math.OA/">Operator Algebras</a></li><li><a href="/r/math.OC/">Optimization and Control</a></li><li><a href="/r/math.PR/">Probability</a></li><li><a href="/r/math.QA/">Quantum Algebra</a></li><li><a href="/r/math.RT/">Representation Theory</a></li><li><a href="/r/math.RA/">Rings and Algebras</a></li><li><a href="/r/math.SP/">Spectral Theory</a></li><li><a href="/r/math.ST/">Statistics Theory</a></li><li><a href="/r/math.SG/">Symplectic Geometry</a></li>
+</ul>
+</div>
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Nonlinear Sciences
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/nlin.AO/">Adaptation and Self_Organizing Systems</a></li><li><a href="/r/nlin.CG/">Cellular Automata and Lattice Gases</a></li><li><a href="/r/nlin.CD/">Chaotic Dynamics</a></li><li><a href="/r/nlin.SI/">Exactly Solvable and Integrable Systems</a></li><li><a href="/r/nlin.PS/">Pattern Formation and Solitons</a></li>
+</ul>
+</div>
+
+
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Computer Science
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/cs.AI/">Artificial Intelligence</a></li><li><a href="/r/cs.CL/">Computation and Language</a></li><li><a href="/r/cs.CC/">Computational Complexity</a></li><li><a href="/r/cs.CE/">Computational Engineering, Finance, and Science</a></li><li><a href="/r/cs.CG/">Computational Geometry</a></li><li><a href="/r/cs.GT/">Computer Science and Game Theory</a></li><li><a href="/r/cs.CV/">Computer Vision and Pattern Recognition</a></li><li><a href="/r/cs.CY/">Computers and Society</a></li><li><a href="/r/cs.CR/">Cryptography and Security</a></li><li><a href="/r/cs.DS/">Data Structures and Algorithms</a></li><li><a href="/r/cs.DB/">Databases</a></li><li><a href="/r/cs.DL/">Digital Libraries</a></li><li><a href="/r/cs.DM/">Discrete Mathematics</a></li><li><a href="/r/cs.DC/">Distributed, Parallel, and Cluster Computing</a></li><li><a href="/r/cs.ET/">Emerging Technologies</a></li><li><a href="/r/cs.FL/">Formal Languages and Automata Theory</a></li><li><a href="/r/cs.GL/">General Literature</a></li><li><a href="/r/cs.GR/">Graphics</a></li><li><a href="/r/cs.AR/">Hardware Architecture</a></li><li><a href="/r/cs.HC/">Human_Computer Interaction</a></li><li><a href="/r/cs.IR/">Information Retrieval</a></li><li><a href="/r/cs.IT/">Information Theory</a></li><li><a href="/r/cs.LG/">Learning</a></li><li><a href="/r/cs.LO/">Logic in Computer Science</a></li><li><a href="/r/cs.MS/">Mathematical Software</a></li><li><a href="/r/cs.MA/">Multiagent Systems</a></li><li><a href="/r/cs.MM/">Multimedia</a></li><li><a href="/r/cs.NI/">Networking and Internet Architecture</a></li><li><a href="/r/cs.NE/">Neural and Evolutionary Computing</a></li><li><a href="/r/cs.NA/">Numerical Analysis</a></li><li><a href="/r/cs.OS/">Operating Systems</a></li><li><a href="/r/cs.OH/">Other Computer Science</a></li><li><a href="/r/cs.PF/">Performance</a></li><li><a href="/r/cs.PL/">Programming Languages</a></li><li><a href="/r/cs.RO/">Robotics</a></li><li><a href="/r/cs.SI/">Social and Information Networks</a></li><li><a href="/r/cs.SE/">Software Engineering</a></li><li><a href="/r/cs.SD/">Sound</a></li><li><a href="/r/cs.SC/">Symbolic Computation</a></li><li><a href="/r/cs.SY/">Systems and Control</a></li>
+</ul>
+</div>
+
+
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Quantitative Biology
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/q_bio.BM/">Biomolecules</a></li><li><a href="/r/q_bio.CB/">Cell Behavior</a></li><li><a href="/r/q_bio.GN/">Genomics</a></li><li><a href="/r/q_bio.MN/">Molecular Networks</a></li><li><a href="/r/q_bio.NC/">Neurons and Cognition</a></li><li><a href="/r/q_bio.OT/">Other Quantitative Biology</a></li><li><a href="/r/q_bio.PE/">Populations and Evolution</a></li><li><a href="/r/q_bio.QM/">Quantitative Methods</a></li><li><a href="/r/q_bio.SC/">Subcellular Processes</a></li><li><a href="/r/q_bio.TO/">Tissues and Organs</a></li>
+</ul>
+</div>
+
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Quantitative Finance
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/q_fin.CP/">Computational Finance</a></li><li><a href="/r/q_fin.GN/">General Finance</a></li><li><a href="/r/q_fin.PM/">Portfolio Management</a></li><li><a href="/r/q_fin.PR/">Pricing of Securities</a></li><li><a href="/r/q_fin.RM/">Risk Management</a></li><li><a href="/r/q_fin.ST/">Statistical Finance</a></li><li><a href="/r/q_fin.TR/">Trading and Market Microstructure</a></li>
+</ul>
+</div>
+
+
+
+<div class="btn-group dropdown">
+<a class="btn dropdown-toggle" data-toggle="dropdown">
+Statistics
+<span class="caret"></span>
+</a>
+<ul class="dropdown-menu">
+<li><a href="/r/stat.AP/">Applications</a></li><li><a href="/r/stat.CO/">Computation</a></li><li><a href="/r/stat.ML/">Machine Learning</a></li><li><a href="/r/stat.ME/">Methodology</a></li><li><a href="/r/stat.OT/">Other Statistics</a></li><li><a href="/r/stat.TH/">Statistics Theory</a></li>
+</ul>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="row">
+<div class="span4 well">
+<h2>Other things to do</h2>
+<ul style="font-size:120%; margin-left:15px">
+<li><a href="http://arxaliv.org/arxalivs">select which categories to subscribe to</a></li>
+<li><a href="http://arxaliv.org/r/all/">view all postings</a>.</li>
+<li><a href="http://arxaliv.org/search">search through postings</a>.</li>
+<li><a href="http://arxaliv.org/r/help/">get help</a></li>
+<li><a href="http://groups.google.com/group/arxaliv">subscribe to mailing list</a></li>
+</ul>
+</div>
+
+
+<div class="span4 well">
+<h2>Open-access journals</h2>
+<ul style="font-size:120%;margin-left:15px"><li><a href="/r/annals_math">Annals of Mathematics</a>&nbsp;(Select years)</li>
+<li><a href="http://arxaliv.org/r/help/comments/h5ah/the_arxiv_is_fully_loaded_what_is_next_to_load/">Suggest more</a>
+</ul>
+</div>
+<div class="span4 well">
+<h2>Hosted journals</h2>
+<ul style="margin-left:15px; font-size:120%"><li>Mathematical Selections (Coming soon)</li>
+<li><a href="http://arxaliv.org/r/help/comments/h8rd/arxaliv_as_a_platform_for_online_journals/">About</a></li>
+</ul>
+</div>
+</div>
+    <link href="https://s3.amazonaws.com/workwolf/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://s3.amazonaws.com/workwolf/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="https://s3.amazonaws.com/workwolf/css/base.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<script src="https://s3.amazonaws.com/workwolf/js/bootstrap.min.js"></script>
+
+<style>
+body {
+  font-size: 10px
+}
+ul, ol {
+  margin: 0 0 0 0;
+}
+.infobar {
+  display:none
+}
+.dropdown-menu {
+  max-width: 350px
+}
+/*.btn-group:after {
+content: inherit
+}*/
+.btn-toolbar .btn-group .btn:first-child {
+top: 8px
+}
+</style>
+
