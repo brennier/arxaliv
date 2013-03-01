@@ -1,3 +1,7 @@
+# arxaliv
+
+This is the codebase for [arxaliv.org](http://arxaliv.org/).  No readme yet, but perhaps one day once the fires are put out and once there are other people interested in the code base.  For now here is the readme for the reddit code base that this is a fork of.
+
 <img src="https://secure.gravatar.com/avatar/c638493729c2f009988c9e5bd9b5e116?s=200" align="right">
 
 # reddit
