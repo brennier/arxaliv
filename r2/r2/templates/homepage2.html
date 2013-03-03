@@ -35,6 +35,17 @@ font-size: 110%
 <h1>Arxaliv &nbsp; <small>the living archive of research papers</small></h1>
 </div>-->
 
+<h3>Search through preprints</h3>
+<form action="http://arxaliv.org/search" id="search" role="search" class="form-search"><input type="text" id="search_q" name="q" class="search-query large" placeholder="the theory of everything" />
+<input type="submit"/ value="Search" class="btn btn-primary btn-large">
+</form>
+
+<h3>Discuss papers</h3>
+<ul>
+<li><h4><a href="http://arxaliv.org/comments" style="font-size">See latest comments</a></h4>
+</ul>
+<br/>
+
 <div class="row arxaliv">
 <div class="span8">
 <h3>If you want to read everything <small>(or you have already &nbsp;<a href="/arxalivs">customised</a>&nbsp; your subscription)</small></h3>
@@ -219,9 +230,9 @@ Physics
 </div>
 
   %if thing.show_sidebar:
-    <div class="side">
+    <!--<div class="side">
       ${thing.rightbox()}
-    </div>
+    </div>-->
   %endif
 </div>
 

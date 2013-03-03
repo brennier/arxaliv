@@ -418,7 +418,7 @@ class CloudSearchUploader(object):
                 # will succeed eventually. If it's something else,
                 # then manually run a consumer with 'use_safe_get'
                 # on to get past the bad Thing in the queue
-                if not self.use_safe_get:
+                if False:#not self.use_safe_get:
                     raise
                 else:
                     g.log.warning("Ignoring problem on thing %r.\n\n%r",
@@ -612,13 +612,13 @@ def rebuild_link_index(start_at=None, sleeptime=1, cls=Link,
     doc_api = getattr(g, doc_api)
     uploader = uploader(doc_api)
 
-    if start_at is _REBUILD_INDEX_CACHE_KEY:
+    if True:#start_at is _REBUILD_INDEX_CACHE_KEY:
         start_at = g.cache.get(cache_key)
         if not start_at:
             raise ValueError("Told me to use '%s' key, but it's not set" %
                              cache_key)
 
-    q = cls._query(cls.c._deleted == (True, False),
+    q = cls._query(cls.c._deleted == False,
                    sort=desc('_date'), data=True)
     if start_at:
         after = cls._by_fullname(start_at)

@@ -488,7 +488,7 @@ class Link(Thing, Printable):
             item.pref_frame = pref_frame
             item.newwindow = pref_newwindow
             # is this link a member of a different (non-c.site) subreddit?
-            item.different_sr = (isinstance(site, FakeSubreddit) or
+            item.different_sr = True or (isinstance(site, FakeSubreddit) or
                                  site.name != item.subreddit.name)
 
             if user_is_loggedin and item.author_id == user._id:
@@ -576,7 +576,7 @@ class Link(Thing, Printable):
             item.editted = getattr(item, "editted", False)
 
             taglinetext = ''
-            if item.different_sr:
+            if item.different_sr or True:
                 author_text = (" <span>" + _("by %(author)s to %(reddit)s") +
                                "</span>")
             else:
