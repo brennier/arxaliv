@@ -1257,7 +1257,7 @@ class VMessageRecipient(VExistingUname):
                 if isinstance(s, FakeSubreddit):
                     raise NotFound, "fake subreddit"
                 if s._spam:
-                    raise NotFound, "banned community"
+                    raise NotFound, "banned subreddit"
                 return s
             except NotFound:
                 self.set_error(errors.SUBREDDIT_NOEXIST)
@@ -1808,10 +1808,7 @@ class VDestination(Validator):
             dest = request.referer or self.default or "/"
 
         ld = dest.lower()
-        if (ld.startswith("/") or
-            ld.startswith("http://") or
-            ld.startswith("https://")):
-
+        if ld.startswith(('/', 'http://', 'http://')):
             u = UrlParser(dest)
 
             if u.is_reddit_url(c.site):

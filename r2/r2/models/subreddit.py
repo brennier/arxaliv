@@ -86,8 +86,9 @@ class Subreddit(Thing, Printable):
                      wiki_edit_karma = 100,
                      wiki_edit_age = 0,
                      over_18 = False,
+                     exclude_banned_modqueue = False,
                      mod_actions = 0,
-                     sponsorship_text = "this reddit is sponsored by",
+                     sponsorship_text = "this subreddit is sponsored by",
                      sponsorship_url = None,
                      sponsorship_img = None,
                      sponsorship_name = None,
@@ -676,6 +677,12 @@ class Subreddit(Thing, Printable):
                 if srs else Subreddit._by_name(g.default_sr))
 
     @classmethod
+    def random_subscription(cls, user):
+        srs = Subreddit.reverse_subscriber_ids(user)
+        return (Subreddit._byID(random.choice(srs))
+                if srs else Subreddit._by_name(g.default_sr))
+
+    @classmethod
     def user_subreddits(cls, user, ids=True, over18=False, limit=DEFAULT_LIMIT,
                         stale=False):
         """
@@ -1233,6 +1240,10 @@ class RandomNSFWReddit(FakeSubreddit):
     name = 'randnsfw'
     header = ""
 
+class RandomSubscriptionReddit(FakeSubreddit):
+    name = 'myrandom'
+    header = ""
+
 class ModContribSR(MultiReddit):
     name  = None
     title = None
@@ -1293,7 +1304,7 @@ class SubSR(FakeSubreddit):
 
     @property
     def path(self):
-        return "/reddits/"
+        return "/subreddits/"
 
 class DomainSR(FakeSubreddit):
     @property
@@ -1318,9 +1329,11 @@ Contrib = ContribSR()
 All = AllSR()
 Random = RandomReddit()
 RandomNSFW = RandomNSFWReddit()
+RandomSubscription = RandomSubscriptionReddit()
 
 Subreddit._specials.update(dict(friends = Friends,
                                 randnsfw = RandomNSFW,
+                                myrandom = RandomSubscription,
                                 random = Random,
                                 mod = Mod,
                                 contrib = Contrib,

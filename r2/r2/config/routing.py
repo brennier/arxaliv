@@ -75,14 +75,14 @@ def make_map():
     mc('/arxalivs/search', controller='front', action='search_reddits')
     mc('/arxalivs/login', controller='forms', action='login')
     mc('/arxalivs/:where', controller='reddits', action='listing',
-       where = 'popular',
-       requirements=dict(where="popular|new|banned"))
+       where='popular', requirements=dict(where="popular|new|banned"))
 
     mc('/arxalivs/mine/:where', controller='myreddits', action='listing',
        where='subscriber',
-       requirements=dict(where='subscriber|contributor|moderator|all|others'))
+       requirements=dict(where='subscriber|contributor|moderator'))
 
-
+    # These routes are kept for backwards-compatibility reasons
+    # Using the above /subreddits/ ones instead is preferable
     mc('/reddits/create', controller='front', action='newreddit')
     mc('/reddits/search', controller='front', action='search_reddits')
     mc('/reddits/login', controller='forms', action='login')

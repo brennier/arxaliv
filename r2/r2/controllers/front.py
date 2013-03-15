@@ -381,10 +381,10 @@ class FrontController(RedditController, OAuth2ResourceController):
     @validate(VUser(),
               name=nop('name'))
     def GET_newreddit(self, name):
-        """Create a community form"""
-        title = _('create a reddit')
+        """Create a subreddit form"""
+        title = _('create a subreddit')
         content=CreateSubreddit(name=name or '')
-        res = FormPage(_("create a community"),
+        res = FormPage(_("create a subreddit"),
                        content=content,
                        ).render()
         return res
@@ -532,6 +532,10 @@ class FrontController(RedditController, OAuth2ResourceController):
             elif location == "modqueue":
                 if x.reported > 0 and not x._spam:
                     return True # reported but not banned
+                if x.author._spam and x.subreddit.exclude_banned_modqueue:
+                    # banned user, don't show if subreddit pref excludes
+                    return False
+
                 verdict = getattr(x, "verdict", None)
                 if verdict is None:
                     return True # anything without a verdict

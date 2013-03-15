@@ -43,6 +43,7 @@ from r2.lib.utils import Storage
 
 from r2.models.wiki import WIKI_RECENT_DAYS
 
+from collections import defaultdict
 import time
 from admintools import compute_votes, admintools, ip_span
 
@@ -495,11 +496,12 @@ class IDBuilder(QueryBuilder):
 class CampaignBuilder(IDBuilder):
     """Build on a list of PromoTuples."""
 
-    def __init__(self, query, wrap=Wrapped, keep_fn=None, prewrap_fn=None):
+    def __init__(self, query, wrap=Wrapped, keep_fn=None, prewrap_fn=None,
+                 skip=False, num=None):
         Builder.__init__(self, wrap=wrap, keep_fn=keep_fn)
         self.query = query
-        self.skip = False
-        self.num = None
+        self.skip = skip
+        self.num = num
         self.start_count = 0
         self.after = None
         self.reverse = False
@@ -517,11 +519,13 @@ class CampaignBuilder(IDBuilder):
     def wrap_items(self, items):
         links = [i.thing for i in items]
         wrapped = IDBuilder.wrap_items(self, links)
-        by_link = {w._fullname: w for w in wrapped}
+        by_link = defaultdict(list)
+        for w in wrapped:
+            by_link[w._fullname].append(w)
 
         ret = []
         for i in items:
-            w = by_link[i.thing._fullname]
+            w = by_link[i.thing._fullname].pop()
             w.campaign = i.campaign
             w.weight = i.weight
             ret.append(w)

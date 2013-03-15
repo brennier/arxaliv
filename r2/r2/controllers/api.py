@@ -1679,6 +1679,7 @@ class ApiController(RedditController, OAuth2ResourceController):
                    over_18 = VBoolean('over_18'),
                    allow_top = VBoolean('allow_top'),
                    show_media = VBoolean('show_media'),
+                   exclude_banned_modqueue = VBoolean('exclude_banned_modqueue'),
                    show_cname_sidebar = VBoolean('show_cname_sidebar'),
                    type = VOneOf('type', ('public', 'private', 'restricted', 'archived')),
                    link_type = VOneOf('link_type', ('any', 'link', 'self')),
@@ -1729,6 +1730,7 @@ class ApiController(RedditController, OAuth2ResourceController):
                   if k in ('name', 'title', 'domain', 'description',
                            'show_media', 'show_cname_sidebar', 'type', 'link_type', 'lang',
                            'css_on_cname', 'header_title', 'over_18',
+                           'exclude_banned_modqueue',
                            'wikimode', 'wiki_edit_karma', 'wiki_edit_age',
                            'allow_top', 'public_description'))
 
@@ -3119,18 +3121,18 @@ class ApiController(RedditController, OAuth2ResourceController):
         Trophy.by_award(award, _update=True)
 
 
-    @validatedForm(link=nop('link'),
-                   campaign=nop('campaign'))
-    def GET_fetch_promo(self, form, jquery, link, campaign):
+    @validate(link=nop('link'),
+              campaign=nop('campaign'))
+    def GET_fetch_promo(self, link, campaign):
         promo_tuples = [promote.PromoTuple(link, 1., campaign)]
         builder = CampaignBuilder(promo_tuples,
                                   wrap=default_thing_wrapper(),
                                   keep_fn=promote.is_promoted)
         promoted_links = builder.get_items()[0]
-        listing = SpotlightListing(organic_links=[],
-                                   promoted_links=promoted_links,
-                                   interestbar=None).listing()
-        jquery(".content").replace_things(listing)
+        if promoted_links:
+            s = SpotlightListing(promoted_links=promoted_links).listing()
+            item = s.things[0]
+            return spaceCompress(item.render())
 
 
     @noresponse(VUser(),

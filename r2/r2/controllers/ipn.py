@@ -35,6 +35,7 @@ from sqlalchemy.exc import IntegrityError
 import stripe
 
 from r2.controllers.reddit_base import RedditController
+from r2.lib.errors import MessageError
 from r2.lib.filters import _force_unicode, _force_utf8
 from r2.lib.log import log_text
 from r2.lib.strings import strings
@@ -247,7 +248,11 @@ def send_gift(buyer, recipient, months, days, signed, giftmessage, comment_id):
         )
 
     subject = sender + " just sent you reddit gold!"
-    send_system_message(recipient, subject, message)
+
+    try:
+        send_system_message(recipient, subject, message)
+    except MessageError:
+        g.log.error('send_gift: could not send system message')
 
     g.log.info("%s gifted %s to %s" % (buyer.name, amount, recipient.name))
     return comment
@@ -371,6 +376,13 @@ class IpnController(RedditController):
             # get the financial details
             auth = trans.find("authorization-amount-notification")
 
+            custom = None
+            cart = trans.find("shopping-cart")
+            if cart:
+                private_item_data = cart.find("merchant-private-item-data")
+                if private_item_data:
+                    custom = str(private_item_data.contents[0])
+
             if not auth:
                 # see if the payment was declinded
                 status = trans.findAll('financial-order-state')
@@ -385,17 +397,22 @@ class IpnController(RedditController):
                     g.log.error(("google transaction status: " +
                                  "'%s', status: %s")
                                 % (short_sn, [x.contents[0] for x in status]))
+                    if custom:
+                        payment_blob = validate_blob(custom)
+                        buyer = payment_blob['buyer']
+                        subject = _('gold order')
+                        msg = _('your order has been received and gold will'
+                                ' be delivered shortly. please bear with us'
+                                ' as google wallet payments can take up to an'
+                                ' hour to complete')
+                        try:
+                            send_system_message(buyer, subject, msg)
+                        except MessageError:
+                            g.log.error('gcheckout send_system_message failed')
             elif auth.find("financial-order-state"
                            ).contents[0] == "CHARGEABLE":
                 email = str(auth.find("email").contents[0])
                 payer_id = str(auth.find('buyer-id').contents[0])
-                # get the "secret"
-                custom = None
-                cart = trans.find("shopping-cart")
-                if cart:
-                    for item in cart.findAll("merchant-private-item-data"):
-                        custom = str(item.contents[0])
-                        break
                 if custom:
                     days = None
                     try:
@@ -732,12 +749,12 @@ class StripeController(GoldPaymentController):
                 customer['active_card']['address_zip_check'] == 'fail'):
                 form.set_html('.status',
                               _('error: address verification failed'))
-                form.find('.stripe-submit').removeClass("disabled").end()
+                form.find('.stripe-submit').removeAttr('disabled').end()
                 return
 
             if customer['active_card']['cvc_check'] == 'fail':
                 form.set_html('.status', _('error: cvc check failed'))
-                form.find('.stripe-submit').removeClass("disabled").end()
+                form.find('.stripe-submit').removeAttr('disabled').end()
                 return
 
             charge = stripe.Charge.create(
@@ -748,6 +765,7 @@ class StripeController(GoldPaymentController):
             )
         except stripe.CardError as e:
             form.set_html('.status', 'error: %s' % e.message)
+            form.find('.stripe-submit').removeAttr('disabled').end()
         except stripe.InvalidRequestError as e:
             form.set_html('.status', _('invalid request'))
         except stripe.APIConnectionError as e:
@@ -937,26 +955,22 @@ def complete_gold_purchase(secret, transaction_id, payer_email, payer_id,
                     message = strings.lounge_msg % dict(link=lounge_url)
                 else:
                     message = ":)"
-                send_system_message(buyer, subject, message)
             else:
                 subject = "your reddit gold has been renewed!"
                 message = ("see the details of your subscription on "
                            "[your userpage](/u/%s)" % buyer.name)
-                send_system_message(buyer, subject, message)
 
         elif goldtype == 'creddits':
             buyer._incr('gold_creddits', months)
             subject = "thanks for buying creddits!"
             message = ("To spend them, visit http://%s/gold or your favorite "
                        "person's userpage." % (g.domain))
-            send_system_message(buyer, subject, message)
 
         elif goldtype == 'gift':
             send_gift(buyer, recipient, months, days, signed, giftmessage,
                       comment)
             subject = "thanks for giving reddit gold!"
             message = "Your gift to %s has been delivered." % recipient.name
-            send_system_message(buyer, subject, message)
 
         status = 'processed'
         secret_pieces = [goldtype]
@@ -971,6 +985,11 @@ def complete_gold_purchase(secret, transaction_id, payer_email, payer_id,
                                 subscr_id=subscription_id, status=status)
         except IntegrityError:
             g.log.error('gold: got duplicate gold transaction')
+
+        try:
+            send_system_message(buyer, subject, message)
+        except MessageError:
+            g.log.error('complete_gold_purchase: could not send system message')
 
 
 def subtract_gold_days(user, days):

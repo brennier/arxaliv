@@ -40,10 +40,11 @@ from r2.lib import (
     inventory,
 )
 from r2.lib.db.queries import set_promote_status
+from r2.lib.memoize import memoize
 from r2.lib.organic import keep_fresh_links
 from r2.lib.strings import strings
 from r2.lib.template_helpers import get_domain
-from r2.lib.utils import UniqueIterator, tup, to_date
+from r2.lib.utils import UniqueIterator, tup, to_date, weighted_lottery
 from r2.models import (
     Account,
     AdWeight,
@@ -784,73 +785,61 @@ def make_daily_promotions(offset=0, test=False):
                         "promotions: %r" % error_campaigns)
 
 
+PromoTuple = namedtuple('PromoTuple', ['link', 'weight', 'campaign'])
+
+
 def get_promotion_list(user, site):
-    # site is specified, pick an ad from that site
     if not isinstance(site, FakeSubreddit):
         srids = set([site._id])
     elif isinstance(site, MultiReddit):
         srids = set(site.sr_ids)
-    # site is Fake, user is not.  Pick based on their subscriptions.
     elif user and not isinstance(user, FakeAccount):
         srids = set(Subreddit.reverse_subscriber_ids(user) + [""])
-    # both site and user are "fake" -- get the default subscription list
     else:
-        srids = set(Subreddit.user_subreddits(None, True) + [""])
+        srids = set(Subreddit.user_subreddits(None, ids=True) + [""])
 
-    return get_promotions_cached(srids)
+    tuples = get_promotion_list_cached(srids)
+    return [PromoTuple(*t) for t in tuples]
 
 
-def get_promotions_cached(sites):
+@memoize('promotion_list', time=60)
+def get_promotion_list_cached(sites):
     weights = get_live_promotions(sites)
-    if weights:
-        available = {}
-        campaigns = {}
-        for sr_id, sr_weights in weights.iteritems():
-            if sr_id in sites:
-                for l, w, cid in sr_weights:
-                    available[l] = available.get(l, 0) + w
-                    campaigns[l] = cid
-        # sort the available list by weight
-        links = available.keys()
-        links.sort(key=lambda x: -available[x])
-        norm = sum(available.values())
-        # return a sorted list of (link, norm_weight)
-        return [(l, available[l] / norm, campaigns[l]) for l in links]
-    else:
+    if not weights:
         return []
 
-def randomized_promotion_list(user, site):
-    promos = get_promotion_list(user, site)
-    # no promos, no problem
-    if not promos:
-        return []
-    # more than two: randomize
-    elif len(promos) > 1:
-        n = random.uniform(0, 1)
-        for i, (l, w, cid) in enumerate(promos):
-            n -= w
-            if n < 0:
-                promos = promos[i:] + promos[:i]
-                break
-    # fall thru for the length 1 case here as well
-    return [(l, cid) for l, w, cid in promos]
+    promos = []
+    total = 0.
+    for sr_id, sr_weights in weights.iteritems():
+        if sr_id not in sites:
+            continue
+        for link, weight, campaign in sr_weights:
+            total += weight
+            promos.append((link, weight, campaign))
+
+    return [(link, weight / total, campaign)
+            for link, weight, campaign in promos]
 
 
-PromoTuple = namedtuple('PromoTuple', ['link', 'weight', 'campaign'])
+def lottery_promoted_links(user, site, n=10):
+    """Run weighted_lottery to order and choose a subset of promoted links."""
+    promo_tuples = get_promotion_list(user, site)
+    weights = {p: p.weight for p in promo_tuples}
+    selected = []
+    while weights and len(selected) < n:
+        s = weighted_lottery(weights)
+        del weights[s]
+        selected.append(s)
+    return selected
 
 
-def get_promoted_links(user, site, n=10):
-    """Return a random selection of promoted links.
-
-    Does not factor weights, as that will be done client side.
-
-    """
-
-    promos = get_promotion_list(user, site)
-    if n >= len(promos):
-        return [PromoTuple(*p) for p in promos]
+def sample_promoted_links(user, site, n=10):
+    """Return a selection of promoted links."""
+    promo_tuples = get_promotion_list(user, site)
+    if len(promo_tuples) <= n:
+        return promo_tuples
     else:
-        return [PromoTuple(*p) for p in random.sample(promos, n)]
+        return random.sample(promo_tuples, n)
 
 
 def get_total_run(link):

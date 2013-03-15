@@ -23,7 +23,7 @@
 from r2.lib.wrapped import Wrapped, Templated, CachedTemplate
 from r2.models import Account, FakeAccount, DefaultSR, make_feedurl
 from r2.models import FakeSubreddit, Subreddit, Ad, AdSR, SubSR, AllMinus, AllSR
-from r2.models import Friends, All, Sub, NotFound, DomainSR, Random, Mod, RandomNSFW, MultiReddit, ModSR, Frontpage
+from r2.models import Friends, All, Sub, NotFound, DomainSR, Random, Mod, RandomNSFW, RandomSubscription, MultiReddit, ModSR, Frontpage
 from r2.models import Link, Printable, Trophy, bidding, PromoCampaign, PromotionWeights, Comment
 from r2.models import Flair, FlairTemplate, FlairTemplateBySubredditIndex
 from r2.models import USER_FLAIR, LINK_FLAIR
@@ -1806,11 +1806,14 @@ class SubredditTopBar(CachedTemplate):
                        css_class = 'sr-bar', _id = 'sr-bar')
 
     def special_reddits(self):
-        css_classes = {Random: "random"}
+        css_classes = {Random: "random",
+                       RandomSubscription: "gold"}
         reddits = [Frontpage, All, Random]
         if getattr(c.site, "over_18", False):
             reddits.append(RandomNSFW)
         if c.user_is_loggedin:
+            if c.user.gold:
+                reddits.append(RandomSubscription)
             if c.user.friends:
                 reddits.append(Friends)
             if c.show_mod_mail:
@@ -1865,7 +1868,7 @@ class SubscriptionBox(Templated):
                             Subreddit.gold_limit - Subreddit.sr_limit)
                 visible = min(len(srs), Subreddit.gold_limit)
                 bonus = {"bonus": extra}
-                self.goldmsg = _("%(bonus)s bonus reddits") % bonus
+                self.goldmsg = _("%(bonus)s bonus subreddits") % bonus
                 self.prelink = ["/wiki/faq#wiki_how_many_reddits_can_i_subscribe_to.3F",
                                 _("%s visible") % visible]
 
@@ -2056,7 +2059,8 @@ class GoldPayment(Templated):
                 if not clone_template:
                     summary = format % dict(
                         amount=Score.somethings(months, "month"),
-                        recipient=recipient and recipient.name,
+                        recipient=recipient and
+                                  recipient.name.replace('_', '&#95;'),
                     )
                 else:
                     # leave the replacements to javascript
@@ -2171,7 +2175,7 @@ class SearchForm(Templated):
 
 
 class SearchBar(Templated):
-    """More detailed search box for /search and /reddits pages.
+    """More detailed search box for /search and /subreddits pages.
     Displays the previous search as well as info of the elapsed_time
     and num_results if any."""
     def __init__(self, header=None, num_results=0, prev_search='',
