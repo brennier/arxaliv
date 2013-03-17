@@ -984,19 +984,11 @@ class MyredditsController(ListingController, OAuth2ResourceController):
                     NavButton(getattr(plurals, "approved submitter"), 'contributor'),
                     NavButton(plurals.moderator,   'moderator'))
 
-<<<<<<< HEAD
         return [NavMenu(buttons, base_path = '/arxalivs/mine/',
                         default = 'subscriber', type = "flatlist")]
 
     def title(self):
         return _('arxalivs: ') + self.where
-=======
-        return [NavMenu(buttons, base_path = '/subreddits/mine/',
-                        default = 'subscriber', type = "flatlist")]
-
-    def title(self):
-        return _('subreddits: ') + self.where
->>>>>>> 728913bcec9a903d2e62ac731f685b1dbf126d3b
 
     def query(self):
         reddits = SRMember._query(SRMember.c._name == self.where,
@@ -1038,13 +1030,8 @@ class MyredditsController(ListingController, OAuth2ResourceController):
     @require_oauth2_scope("mysubreddits")
     @validate(VUser())
     @listing_api_doc(section=api_section.subreddits,
-<<<<<<< HEAD
                      uri='/arxalivs/mine/{where}',
                      uri_variants=['/arxalivs/mine/subscriber', '/arxalivs/mine/contributor', '/arxalivs/mine/moderator'])
-=======
-                     uri='/subreddits/mine/{where}',
-                     uri_variants=['/subreddits/mine/subscriber', '/subreddits/mine/contributor', '/subreddits/mine/moderator'])
->>>>>>> 728913bcec9a903d2e62ac731f685b1dbf126d3b
     def GET_listing(self, where='subscriber', **env):
         self.where = where
         return ListingController.GET_listing(self, **env)
